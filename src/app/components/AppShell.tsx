@@ -278,6 +278,8 @@ function TopBar({ title }: { title: string }) {
       <div className="topbar-spacer" />
       <div className="topbar-actions">
         <ThemeSwitcher />
+        <a href="/signin" style={{ textDecoration: 'none' }}><button className="btn btn-sm btn-secondary">Sign In</button></a>
+        <a href="/signup" style={{ textDecoration: 'none' }}><button className="btn btn-sm btn-primary">Sign Up</button></a>
         <button className="btn btn-sm btn-secondary" onClick={handleSeed}>Seed Data</button>
         <button className="btn btn-sm btn-primary" onClick={handleRecon}>▶ Run Recon</button>
         <button className="btn-icon" style={{ position: 'relative', marginLeft: '8px', color: 'var(--text-secondary)' }}>
