@@ -25,11 +25,14 @@ export async function initSchema() {
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       tenant_id TEXT NOT NULL REFERENCES tenants(id),
-      email TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
+      password_hash TEXT,
       role TEXT NOT NULL DEFAULT 'viewer',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
     -- Raw Events (immutable)
     CREATE TABLE IF NOT EXISTS raw_events (
