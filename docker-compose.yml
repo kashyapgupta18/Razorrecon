@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  razorrecon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: razorrecon:latest
+    container_name: razorrecon-app
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/razorrecon
+
+  db:
+    image: postgres:15-alpine
+    container_name: razorrecon-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=razorrecon
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

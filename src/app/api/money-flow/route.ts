@@ -1,0 +1,57 @@
+import { NextResponse } from 'next/server';
+import { getDb } from '@/lib/db';
+
+const TENANT_ID = 'tenant_demo_001';
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
+  try {
+    const db = getDb();
+    const payments = (await db.query("SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type = 'payment'", [TENANT_ID])).rows;
+    const refunds = (await db.query("SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type = 'refund'", [TENANT_ID])).rows;
+    const settlements = (await db.query("SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type = 'settlement'", [TENANT_ID])).rows;
+
+    let totalGross = 0;
+    let totalFees = 0;
+    let totalTax = 0;
+    let totalNet = 0;
+    let totalRefunds = 0;
+    let totalSettled = 0;
+
+    for (const p of payments) {
+      totalGross += Number(p.amount_minor);
+      totalFees += Number(p.fee_minor);
+      totalTax += Number(p.tax_minor);
+      totalNet += Number(p.net_minor);
+    }
+    for (const r of refunds) totalRefunds += Math.abs(Number(r.amount_minor));
+    for (const s of settlements) totalSettled += Number(s.amount_minor);
+
+    const nodes = [
+      { id: 'Customer Payments' },
+      { id: 'Gross Volume' },
+      { id: 'MDR Fees' },
+      { id: 'GST on Fees' },
+      { id: 'Net Processing' },
+      { id: 'Refunds' },
+      { id: 'Settled to Bank' },
+      { id: 'Pending Settlement' }
+    ];
+
+    const pending = Math.max(0, totalNet - totalRefunds - totalSettled);
+
+    const links = [
+      { source: 'Customer Payments', target: 'Gross Volume', value: totalGross },
+      { source: 'Gross Volume', target: 'MDR Fees', value: totalFees },
+      { source: 'Gross Volume', target: 'GST on Fees', value: totalTax },
+      { source: 'Gross Volume', target: 'Net Processing', value: totalNet },
+      { source: 'Net Processing', target: 'Refunds', value: totalRefunds },
+      { source: 'Net Processing', target: 'Settled to Bank', value: totalSettled },
+      { source: 'Net Processing', target: 'Pending Settlement', value: pending > 0 ? pending : 0 }
+    ].filter(l => l.value > 0);
+
+    return NextResponse.json({ nodes, links });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
