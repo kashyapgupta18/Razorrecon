@@ -304,6 +304,16 @@ export async function initSchema() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- Password Resets
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      otp TEXT NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      used BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Create indexes
     CREATE INDEX IF NOT EXISTS idx_transactions_tenant ON canonical_transactions(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_transactions_payment ON canonical_transactions(payment_id);

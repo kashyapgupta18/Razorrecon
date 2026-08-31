@@ -99,7 +99,10 @@ export default function SigninPage() {
             </div>
 
             <div className="authFormGroup">
-              <label className="authLabel" htmlFor="signin-password">Password</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label className="authLabel" htmlFor="signin-password" style={{ marginBottom: 0 }}>Password</label>
+                <Link href="/forgot-password" style={{ fontSize: '0.8rem', color: '#818cf8', textDecoration: 'none', fontWeight: 600 }}>Forgot Password?</Link>
+              </div>
               <input
                 id="signin-password"
                 type="password"
