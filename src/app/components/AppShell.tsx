@@ -306,6 +306,97 @@ function ThemeSwitcher() {
   );
 }
 
+// === Notification Bell ===
+function NotificationBell() {
+  const [isOpen, setIsOpen] = useState(false);
+  const { events, lastEvent } = useWS();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [popups, setPopups] = useState<any[]>([]);
+
+  // Filter events to only meaningful notifications
+  const notifications = events.filter(e => e.channel === 'system:notification' || e.channel === 'system:reconciliation' || e.channel === 'system:seed' || e.channel === 'system:heartbeat');
+
+  // Trigger 2-second popup on new event
+  useEffect(() => {
+    if (lastEvent && ['system:notification', 'system:reconciliation', 'system:seed', 'system:heartbeat'].includes(lastEvent.channel || '')) {
+      if (!isOpen) setUnreadCount(c => c + 1);
+      
+      // Add to popup
+      const popupId = Date.now();
+      setPopups(p => [...p, { id: popupId, event: lastEvent }]);
+      
+      // Auto remove after 2 seconds
+      setTimeout(() => {
+        setPopups(p => p.filter(item => item.id !== popupId));
+      }, 2000);
+    }
+  }, [lastEvent, isOpen]);
+
+  return (
+    <div style={{ position: 'relative', marginLeft: '8px' }}>
+      <button 
+        className="btn-icon" 
+        style={{ position: 'relative', color: 'var(--text-secondary)' }}
+        onClick={() => { setIsOpen(!isOpen); setUnreadCount(0); }}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        {unreadCount > 0 && (
+          <span style={{ position: 'absolute', top: '6px', right: '8px', width: '6px', height: '6px', background: 'var(--accent-red)', borderRadius: '50%', boxShadow: '0 0 4px var(--accent-red)' }}></span>
+        )}
+      </button>
+
+      {/* 2-second Popups */}
+      {popups.length > 0 && !isOpen && (
+        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '12px', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {popups.map(p => {
+            let msg = 'System Update';
+            if (p.event.channel === 'system:reconciliation') msg = 'Reconciliation Complete';
+            if (p.event.channel === 'system:seed') msg = 'Database Seeded';
+            if (p.event.data?.type === 'ai_query') msg = 'AI Query Processed';
+            
+            return (
+              <div key={p.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--accent-purple)', color: 'var(--text-primary)', padding: '10px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 500, whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', animation: 'slideDown 0.2s ease-out' }}>
+                <span style={{ color: 'var(--accent-purple)', marginRight: '6px' }}>🔔</span>
+                {msg}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {isOpen && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setIsOpen(false)} />
+          <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', background: 'var(--bg-card)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-md)', padding: '12px', width: '280px', zIndex: 100, backdropFilter: 'blur(20px)', boxShadow: 'var(--shadow-lg)' }}>
+            <h4 style={{ fontSize: '14px', margin: '0 0 12px', color: 'var(--text-primary)' }}>Notifications</h4>
+            {notifications.length === 0 ? (
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>
+                No new notifications
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+                {notifications.slice(0, 10).map((n, i) => (
+                  <div key={i} style={{ fontSize: '12px', padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', borderLeft: '3px solid var(--accent-purple)' }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                      {n.channel === 'system:reconciliation' ? 'Reconciliation Run' : n.channel === 'system:seed' ? 'Database Seeded' : 'System Alert'}
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>
+                      {n.data?.type === 'reconciliation_complete' ? `Match Rate: ${n.data.match_rate}%` : n.data?.type === 'ai_query' ? 'AI generated a response' : 'Update received'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // === User Menu ===
 function UserMenu() {
   const { user, logout } = useAuth();
@@ -438,13 +529,7 @@ function TopBar({ title }: { title: string }) {
         <ThemeSwitcher />
         <button className="btn btn-sm btn-secondary" onClick={handleSeed}>Seed Data</button>
         <button className="btn btn-sm btn-primary" onClick={handleRecon}>▶ Run Recon</button>
-        <button className="btn-icon" style={{ position: 'relative', marginLeft: '8px', color: 'var(--text-secondary)' }}>
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-          </svg>
-          <span style={{ position: 'absolute', top: '6px', right: '8px', width: '6px', height: '6px', background: 'var(--accent-red)', borderRadius: '50%', boxShadow: '0 0 4px var(--accent-red)' }}></span>
-        </button>
+        <NotificationBell />
         <UserMenu />
         <div className="ws-indicator" style={{ marginLeft: '8px' }}>
           <span className={`ws-dot ${connected ? 'connected' : 'disconnected'}`} />
