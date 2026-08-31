@@ -5,6 +5,33 @@ let css = fs.readFileSync('src/app/globals.css', 'utf8');
 css = css.replace(/rgba\(255,\s*255,\s*255,/g, 'rgba(var(--rgb-glass),');
 css = css.replace(/rgba\(0,\s*0,\s*0,/g, 'rgba(var(--rgb-shadow),');
 
+// Replace hex whites with rgba
+css = css.replace(/#ffffff05/gi, 'rgba(var(--rgb-glass), 0.02)');
+css = css.replace(/#ffffff08/gi, 'rgba(var(--rgb-glass), 0.03)');
+css = css.replace(/#ffffff0a/gi, 'rgba(var(--rgb-glass), 0.04)');
+css = css.replace(/#ffffff0d/gi, 'rgba(var(--rgb-glass), 0.05)');
+css = css.replace(/#ffffff0f/gi, 'rgba(var(--rgb-glass), 0.06)');
+css = css.replace(/#ffffff14/gi, 'rgba(var(--rgb-glass), 0.08)');
+css = css.replace(/#ffffff1a/gi, 'rgba(var(--rgb-glass), 0.1)');
+css = css.replace(/#ffffff26/gi, 'rgba(var(--rgb-glass), 0.15)');
+css = css.replace(/#ffffff33/gi, 'rgba(var(--rgb-glass), 0.2)');
+css = css.replace(/#ffffff40/gi, 'rgba(var(--rgb-glass), 0.25)');
+css = css.replace(/#ffffff4d/gi, 'rgba(var(--rgb-glass), 0.3)');
+css = css.replace(/#ffffff66/gi, 'rgba(var(--rgb-glass), 0.4)');
+css = css.replace(/#fff3/gi, 'rgba(var(--rgb-glass), 0.2)');
+css = css.replace(/#ffffff/gi, 'var(--text-primary)');
+css = css.replace(/#fff/gi, 'var(--text-primary)');
+
+// Fix shadows
+css = css.replace(/#0000001a/gi, 'rgba(var(--rgb-shadow), 0.1)');
+css = css.replace(/#00000033/gi, 'rgba(var(--rgb-shadow), 0.2)');
+css = css.replace(/#0000004d/gi, 'rgba(var(--rgb-shadow), 0.3)');
+css = css.replace(/#00000066/gi, 'rgba(var(--rgb-shadow), 0.4)');
+css = css.replace(/#00000080/gi, 'rgba(var(--rgb-shadow), 0.5)');
+css = css.replace(/#0003/gi, 'rgba(var(--rgb-shadow), 0.2)');
+css = css.replace(/#000c/gi, 'rgba(var(--rgb-shadow), 0.8)');
+css = css.replace(/#0000/gi, 'transparent');
+
 const rootMatch = css.match(/:root\s*\{([\s\S]*?)\}/);
 if (rootMatch) {
   const themeVars = `/* Common structure vars */
