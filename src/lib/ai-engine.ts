@@ -341,6 +341,8 @@ async function fallbackHandler(query: string, _db: Pool, _tenantId: string): Pro
     const chatResponse = await groq.chat.completions.create({
       model: model, 
       messages: [{ role: 'user', content: query }],
+      max_tokens: 1024,
+      temperature: 0.5,
     });
 
     const answer = chatResponse.choices[0]?.message?.content || "No response generated.";
