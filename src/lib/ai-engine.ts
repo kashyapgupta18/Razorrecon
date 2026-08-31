@@ -324,10 +324,17 @@ async function fallbackHandler(query: string, _db: Pool, _tenantId: string): Pro
     // Dynamically fetch available models to avoid decommission errors
     if (!model) {
       const models = await groq.models.list();
-      // Try to find a llama or gemma model, otherwise just use the first available one
       const availableModels = models.data.map(m => m.id);
-      model = availableModels.find(m => m.includes('llama')) || 
-              availableModels.find(m => m.includes('gemma')) || 
+      
+      // Filter out non-conversational models like prompt-guard and whisper
+      const chatModels = availableModels.filter(m => 
+        (m.includes('llama') || m.includes('gemma') || m.includes('mixtral')) && 
+        !m.includes('guard') && !m.includes('whisper')
+      );
+      
+      model = chatModels.find(m => m.includes('llama-3.1-8b')) ||
+              chatModels.find(m => m.includes('llama-3')) ||
+              chatModels[0] || 
               availableModels[0];
     }
 
