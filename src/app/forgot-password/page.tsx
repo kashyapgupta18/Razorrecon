@@ -40,8 +40,7 @@ export default function ForgotPasswordPage() {
       if (!res.ok) {
         setError(data.error || 'Something went wrong');
       } else {
-        // Show simulated OTP in a toast for testing purposes
-        addToast(`Simulated Email: Your OTP is ${data.simulatedOtp}`, 'info');
+        addToast(data.message || 'OTP sent successfully. Please check your email.', 'success');
         setStep(2);
       }
     } catch (err) {
