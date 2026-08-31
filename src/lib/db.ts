@@ -278,6 +278,32 @@ export async function initSchema() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- User Sessions (tracks every sign-in)
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      ip_address TEXT,
+      user_agent TEXT,
+      logged_in_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      logged_out_at TIMESTAMP,
+      is_active BOOLEAN DEFAULT true
+    );
+
+    -- User Payments (tracks payment events)
+    CREATE TABLE IF NOT EXISTS user_payments (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      amount_minor INTEGER NOT NULL,
+      currency TEXT DEFAULT 'INR',
+      status TEXT DEFAULT 'pending',
+      payment_gateway TEXT,
+      gateway_payment_id TEXT,
+      gateway_order_id TEXT,
+      metadata_json TEXT DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Create indexes
     CREATE INDEX IF NOT EXISTS idx_transactions_tenant ON canonical_transactions(tenant_id);
     CREATE INDEX IF NOT EXISTS idx_transactions_payment ON canonical_transactions(payment_id);

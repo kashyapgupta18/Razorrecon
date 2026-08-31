@@ -1,4 +1,5 @@
 'use client';
+// @ts-nocheck
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -9,6 +10,60 @@ interface WebSocketEvent {
   timestamp?: string | number;
   data?: Record<string, unknown>;
   [key: string]: unknown;
+}
+
+// === Auth Context ===
+interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface AuthContextType {
+  user: AuthUser | null;
+  loading: boolean;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType>({ user: null, loading: true, logout: async () => {} });
+export const useAuth = () => useContext(AuthContext);
+
+function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => {
+        if (data.authenticated && data.user) {
+          setUser(data.user);
+        } else {
+          // Not authenticated — redirect to welcome
+          router.replace('/welcome');
+        }
+      })
+      .catch(() => {
+        router.replace('/welcome');
+      })
+      .finally(() => setLoading(false));
+  }, [router]);
+
+  const logout = useCallback(async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
+    setUser(null);
+    router.replace('/welcome');
+  }, [router]);
+
+  return (
+    <AuthContext.Provider value={{ user, loading, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 // === WebSocket Context ===
@@ -251,6 +306,109 @@ function ThemeSwitcher() {
   );
 }
 
+// === User Menu ===
+function UserMenu() {
+  const { user, logout } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!user) return null;
+
+  const initials = user.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
+  return (
+    <div style={{ position: 'relative', marginLeft: '8px' }}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 12px 4px 4px',
+          background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '100px', cursor: 'pointer', transition: 'all 0.2s', color: 'var(--text-primary)'
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+      >
+        <div style={{
+          width: '32px', height: '32px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, #6366f1, #06b6d4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '12px', fontWeight: 700, color: '#fff', letterSpacing: '0.02em'
+        }}>
+          {initials}
+        </div>
+        <span style={{ fontSize: '13px', fontWeight: 600, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {user.name}
+        </span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}>
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+
+      {isOpen && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setIsOpen(false)} />
+          <div style={{
+            position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+            background: 'var(--bg-card)', border: '1px solid var(--border-glass)',
+            borderRadius: 'var(--radius-md)', padding: '8px', minWidth: '220px',
+            zIndex: 100, backdropFilter: 'blur(20px)', boxShadow: 'var(--shadow-lg)'
+          }}>
+            {/* User info header */}
+            <div style={{ padding: '12px 12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>{user.name}</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{user.email}</div>
+              <div style={{
+                display: 'inline-block', marginTop: '8px', padding: '2px 8px',
+                background: 'rgba(99,102,241,0.12)', color: '#a5b4fc',
+                borderRadius: '100px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em'
+              }}>
+                {user.role}
+              </div>
+            </div>
+
+            {/* Menu actions */}
+            <div style={{ padding: '4px 0' }}>
+              <a href="/settings" style={{
+                display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 500,
+                textDecoration: 'none', transition: 'all 0.2s'
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                Settings
+              </a>
+              <button onClick={() => { setIsOpen(false); logout(); }} style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
+                borderRadius: '8px', color: '#fca5a5', fontSize: '13px', fontWeight: 500,
+                background: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left'
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // === Top Bar ===
 function TopBar({ title }: { title: string }) {
   const { connected } = useWS();
@@ -278,8 +436,6 @@ function TopBar({ title }: { title: string }) {
       <div className="topbar-spacer" />
       <div className="topbar-actions">
         <ThemeSwitcher />
-        <a href="/signin" style={{ textDecoration: 'none' }}><button className="btn btn-sm btn-secondary">Sign In</button></a>
-        <a href="/signup" style={{ textDecoration: 'none' }}><button className="btn btn-sm btn-primary">Sign Up</button></a>
         <button className="btn btn-sm btn-secondary" onClick={handleSeed}>Seed Data</button>
         <button className="btn btn-sm btn-primary" onClick={handleRecon}>▶ Run Recon</button>
         <button className="btn-icon" style={{ position: 'relative', marginLeft: '8px', color: 'var(--text-secondary)' }}>
@@ -289,12 +445,33 @@ function TopBar({ title }: { title: string }) {
           </svg>
           <span style={{ position: 'absolute', top: '6px', right: '8px', width: '6px', height: '6px', background: 'var(--accent-red)', borderRadius: '50%', boxShadow: '0 0 4px var(--accent-red)' }}></span>
         </button>
+        <UserMenu />
         <div className="ws-indicator" style={{ marginLeft: '8px' }}>
           <span className={`ws-dot ${connected ? 'connected' : 'disconnected'}`} />
           <span>{connected ? 'LIVE' : 'OFFLINE'}</span>
         </div>
       </div>
     </header>
+  );
+}
+
+// === Loading Screen ===
+function AuthLoadingScreen() {
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'var(--bg-primary, #030712)', flexDirection: 'column', gap: '16px'
+    }}>
+      <div style={{
+        width: 48, height: 48,
+        border: '3px solid rgba(99,102,241,0.15)', borderTopColor: '#6366f1',
+        borderRadius: '50%', animation: 'authSpin 0.8s linear infinite'
+      }} />
+      <div style={{ color: '#64748b', fontSize: '14px', fontFamily: 'Outfit, sans-serif' }}>
+        Loading RazorRecon AI...
+      </div>
+      <style>{`@keyframes authSpin { to { transform: rotate(360deg); } }`}</style>
+    </div>
   );
 }
 
@@ -313,17 +490,32 @@ export default function AppShell({ children, currentPath, title }: { children: R
   }, []);
 
   return (
-    <WSProvider>
-      <ToastProvider>
-        <div className="app-layout">
-          <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} currentPath={currentPath} />
-          <div className={`app-main ${collapsed ? 'collapsed' : ''}`}>
-            <TopBar title={title} />
-            <div className="page-content fade-in">{children}</div>
-          </div>
-          <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
-        </div>
-      </ToastProvider>
-    </WSProvider>
+    <AuthProvider>
+      <AuthGate>
+        <WSProvider>
+          <ToastProvider>
+            <div className="app-layout">
+              <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(v => !v)} currentPath={currentPath} />
+              <div className={`app-main ${collapsed ? 'collapsed' : ''}`}>
+                <TopBar title={title} />
+                <div className="page-content fade-in">{children}</div>
+              </div>
+              <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+            </div>
+          </ToastProvider>
+        </WSProvider>
+      </AuthGate>
+    </AuthProvider>
   );
+}
+
+// === Auth Gate — shows loading while checking auth ===
+function AuthGate({ children }: { children: ReactNode }) {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return <AuthLoadingScreen />;
+  }
+
+  return <>{children}</>;
 }

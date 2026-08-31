@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
+import { v4 as uuidv4 } from 'uuid';
 import getDb from '@/lib/db';
 
 const JWT_SECRET = new TextEncoder().encode(
@@ -40,6 +41,33 @@ export async function POST(request: Request) {
       .setIssuedAt()
       .setExpirationTime('24h')
       .sign(JWT_SECRET);
+
+    // Log session to Supabase
+    const sessionId = uuidv4();
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+
+    try {
+      await pool.query(
+        `INSERT INTO user_sessions (id, user_id, ip_address, user_agent, logged_in_at, is_active)
+         VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, true)`,
+        [sessionId, user.id, ipAddress, userAgent]
+      );
+    } catch (sessionErr) {
+      console.error('Failed to log session:', sessionErr);
+      // Don't block login if session logging fails
+    }
+
+    // Log audit event
+    try {
+      await pool.query(
+        `INSERT INTO audit_events (id, tenant_id, actor, action, entity_type, entity_id, details_json)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [uuidv4(), user.tenant_id, user.email, 'user_signin', 'user', user.id, JSON.stringify({ ip: ipAddress, userAgent })]
+      );
+    } catch (auditErr) {
+      console.error('Failed to log audit event:', auditErr);
+    }
 
     const response = NextResponse.json({ success: true, user: { id: user.id, name: user.name, email: user.email } });
     

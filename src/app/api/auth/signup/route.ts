@@ -11,6 +11,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
+    if (password.length < 6) {
+      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+    }
+
     const pool = getDb();
     
     // Check if user already exists
@@ -39,6 +43,21 @@ export async function POST(request: Request) {
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [userId, tenantId, email, name, passwordHash, 'admin']
     );
+
+    // Log signup audit event to Supabase
+    const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+
+    try {
+      await pool.query(
+        `INSERT INTO audit_events (id, tenant_id, actor, action, entity_type, entity_id, details_json)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [uuidv4(), tenantId, email, 'user_signup', 'user', userId, JSON.stringify({ name, ip: ipAddress, userAgent })]
+      );
+    } catch (auditErr) {
+      console.error('Failed to log signup audit event:', auditErr);
+      // Don't block signup if audit logging fails
+    }
 
     return NextResponse.json({ success: true, message: 'User created successfully' });
   } catch (error: any) {
