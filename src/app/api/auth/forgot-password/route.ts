@@ -46,6 +46,8 @@ export async function POST(request: Request) {
        console.error("Missing SendGrid environment variables (SENDGRID_API_KEY or SENDGRID_FROM_EMAIL). OTP not sent.");
        return NextResponse.json({ error: 'Email service is not configured properly.' }, { status: 500 });
     }
+    // Initialize SendGrid API key right before sending to ensure env vars are loaded
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
     const msg = {
       to: email,
@@ -75,6 +77,13 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error('Forgot password error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    
+    // Check if it's a SendGrid error (they usually put details in error.response.body)
+    if (error.response && error.response.body && error.response.body.errors) {
+      const sgError = error.response.body.errors[0]?.message || 'SendGrid API Error';
+      return NextResponse.json({ error: \`Email Failed: \${sgError}\` }, { status: 500 });
+    }
+    
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }

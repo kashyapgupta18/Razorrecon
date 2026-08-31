@@ -99,10 +99,7 @@ export default function SigninPage() {
             </div>
 
             <div className="authFormGroup">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <label className="authLabel" htmlFor="signin-password" style={{ marginBottom: 0 }}>Password</label>
-                <Link href="/forgot-password" style={{ fontSize: '0.8rem', color: '#818cf8', textDecoration: 'none', fontWeight: 600 }}>Forgot Password?</Link>
-              </div>
+              <label className="authLabel" htmlFor="signin-password">Password</label>
               <input
                 id="signin-password"
                 type="password"
@@ -112,6 +109,9 @@ export default function SigninPage() {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
               />
+              <div style={{ textAlign: 'right', marginTop: '8px' }}>
+                <Link href="/forgot-password" style={{ fontSize: '0.85rem', color: '#818cf8', textDecoration: 'none', fontWeight: 600 }}>Forgot Password?</Link>
+              </div>
             </div>
 
             <button type="submit" className="authButton" disabled={loading}>
