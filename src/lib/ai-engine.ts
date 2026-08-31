@@ -319,7 +319,7 @@ async function fallbackHandler(query: string, _db: Pool, _tenantId: string): Pro
   
   try {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const model = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+    const model = process.env.GROQ_MODEL || 'mixtral-8x7b-32768';
 
     const chatResponse = await groq.chat.completions.create({
       model: model, 
