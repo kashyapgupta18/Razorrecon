@@ -319,7 +319,17 @@ async function fallbackHandler(query: string, _db: Pool, _tenantId: string): Pro
   
   try {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const model = process.env.GROQ_MODEL || 'mixtral-8x7b-32768';
+    let model = process.env.GROQ_MODEL;
+
+    // Dynamically fetch available models to avoid decommission errors
+    if (!model) {
+      const models = await groq.models.list();
+      // Try to find a llama or gemma model, otherwise just use the first available one
+      const availableModels = models.data.map(m => m.id);
+      model = availableModels.find(m => m.includes('llama')) || 
+              availableModels.find(m => m.includes('gemma')) || 
+              availableModels[0];
+    }
 
     const chatResponse = await groq.chat.completions.create({
       model: model, 
