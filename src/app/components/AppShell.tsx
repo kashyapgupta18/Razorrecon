@@ -314,11 +314,19 @@ function NotificationBell() {
   const [popups, setPopups] = useState<any[]>([]);
 
   // Filter events to only meaningful notifications
-  const notifications = events.filter(e => e.channel === 'system:notification' || e.channel === 'system:reconciliation' || e.channel === 'system:seed' || e.channel === 'system:heartbeat');
+  const notifications = events.filter(e => 
+    e.channel === 'system:notification' || 
+    e.channel === 'system:reconciliation' || 
+    e.channel === 'system:seed' || 
+    (e.channel === 'system:heartbeat' && e.data?.type === 'ai_query')
+  );
 
   // Trigger 2-second popup on new event
   useEffect(() => {
-    if (lastEvent && ['system:notification', 'system:reconciliation', 'system:seed', 'system:heartbeat'].includes(lastEvent.channel || '')) {
+    if (lastEvent && (
+      ['system:notification', 'system:reconciliation', 'system:seed'].includes(lastEvent.channel || '') ||
+      (lastEvent.channel === 'system:heartbeat' && lastEvent.data?.type === 'ai_query')
+    )) {
       if (!isOpen) setUnreadCount(c => c + 1);
       
       // Add to popup
