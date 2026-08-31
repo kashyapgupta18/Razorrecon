@@ -310,17 +310,41 @@ const queryPatterns: QueryPattern[] = [
   },
 ];
 
-// Fallback handler
+import ollama from 'ollama';
+
+// Fallback handler - connects to Ollama for random queries
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function fallbackHandler(query: string, _db: Pool, _tenantId: string): Promise<AIResponse> {
   const t0 = performance.now();
-  return {
-    id: genId('ai'), query,
-    response: `I understand you're asking about: "${query}"\n\nI can help with:\n- **Exception analysis**: "Show critical exceptions"\n- **Match explanations**: "Explain how records are matched"\n- **Forecasting**: "Forecast next 30 days exposure"\n- **System overview**: "Give me a summary"\n- **Anomaly detection**: "Show anomalies"\n\nPlease try one of these query patterns.`,
-    confidence: 30, proofOfLogic: [`STEP 1: No matching query pattern found for: "${query}"`],
-    citations: [], model: 'razorrecon-logic-v1', tokensUsed: query.length + 200,
-    queryType: 'fallback', executionTimeMs: performance.now() - t0
-  };
+  
+  try {
+    const chatResponse = await ollama.chat({
+      model: process.env.OLLAMA_MODEL || 'llama3', 
+      messages: [{ role: 'user', content: query }],
+    });
+
+    return {
+      id: genId('ai'), query,
+      response: chatResponse.message.content,
+      confidence: 85, 
+      proofOfLogic: [
+        `STEP 1: No deterministic rule matched the query.`,
+        `STEP 2: Delegated to LLM via Ollama (${process.env.OLLAMA_MODEL || 'llama3'}).`
+      ],
+      citations: [], model: \`ollama-\${process.env.OLLAMA_MODEL || 'llama3'}\`, 
+      tokensUsed: query.length + chatResponse.message.content.length,
+      queryType: 'general_qa', executionTimeMs: performance.now() - t0
+    };
+  } catch (error: any) {
+    console.error("Ollama fallback failed:", error);
+    return {
+      id: genId('ai'), query,
+      response: \`I couldn't reach the Ollama service to answer your question. (\${error.message})\n\nIf you're running this on Render, make sure you have an external Ollama URL configured via the OLLAMA_HOST environment variable.\`,
+      confidence: 0, proofOfLogic: [\`STEP 1: Ollama API call failed\`],
+      citations: [], model: 'ollama-error', tokensUsed: query.length,
+      queryType: 'fallback', executionTimeMs: performance.now() - t0
+    };
+  }
 }
 
 export async function processAIQuery(tenantId: string, query: string): Promise<AIResponse> {
