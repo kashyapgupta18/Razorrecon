@@ -310,38 +310,43 @@ const queryPatterns: QueryPattern[] = [
   },
 ];
 
-import ollama from 'ollama';
+import Groq from 'groq-sdk';
 
-// Fallback handler - connects to Ollama for random queries
+// Fallback handler - connects to Groq (Llama 3) for random queries in the cloud
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function fallbackHandler(query: string, _db: Pool, _tenantId: string): Promise<AIResponse> {
   const t0 = performance.now();
   
   try {
-    const chatResponse = await ollama.chat({
-      model: process.env.OLLAMA_MODEL || 'llama3', 
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const model = process.env.GROQ_MODEL || 'llama3-8b-8192';
+
+    const chatResponse = await groq.chat.completions.create({
+      model: model, 
       messages: [{ role: 'user', content: query }],
     });
 
+    const answer = chatResponse.choices[0]?.message?.content || "No response generated.";
+
     return {
       id: genId('ai'), query,
-      response: chatResponse.message.content,
+      response: answer,
       confidence: 85, 
       proofOfLogic: [
         `STEP 1: No deterministic rule matched the query.`,
-        `STEP 2: Delegated to LLM via Ollama (${process.env.OLLAMA_MODEL || 'llama3'}).`
+        `STEP 2: Delegated to LLM via Groq API (${model}).`
       ],
-      citations: [], model: `ollama-${process.env.OLLAMA_MODEL || 'llama3'}`, 
-      tokensUsed: query.length + chatResponse.message.content.length,
+      citations: [], model: `groq-${model}`, 
+      tokensUsed: query.length + answer.length,
       queryType: 'general_qa', executionTimeMs: performance.now() - t0
     };
   } catch (error: any) {
-    console.error("Ollama fallback failed:", error);
+    console.error("Groq fallback failed:", error);
     return {
       id: genId('ai'), query,
-      response: `I couldn't reach the Ollama service to answer your question. (${error.message})\n\nIf you're running this on Render, make sure you have an external Ollama URL configured via the OLLAMA_HOST environment variable.`,
-      confidence: 0, proofOfLogic: [`STEP 1: Ollama API call failed`],
-      citations: [], model: 'ollama-error', tokensUsed: query.length,
+      response: `I couldn't reach the Groq AI service to answer your question. (${error.message})\n\nMake sure you have added your GROQ_API_KEY to the Render environment variables.`,
+      confidence: 0, proofOfLogic: [`STEP 1: Groq API call failed`],
+      citations: [], model: 'groq-error', tokensUsed: query.length,
       queryType: 'fallback', executionTimeMs: performance.now() - t0
     };
   }
