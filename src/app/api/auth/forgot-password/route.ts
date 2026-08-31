@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     // Check if it's a SendGrid error (they usually put details in error.response.body)
     if (error.response && error.response.body && error.response.body.errors) {
       const sgError = error.response.body.errors[0]?.message || 'SendGrid API Error';
-      return NextResponse.json({ error: \`Email Failed: \${sgError}\` }, { status: 500 });
+      return NextResponse.json({ error: `Email Failed: ${sgError}` }, { status: 500 });
     }
     
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
