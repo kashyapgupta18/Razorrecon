@@ -60,10 +60,10 @@ app.prepare().then(() => {
         console.error('[SEED] Auto-seed failed:', e.message);
       }
 
-      // Auto-start live simulator (generates a new transaction every 30 seconds)
+      // Auto-start live simulator (generates a new transaction every 5 seconds)
       try {
-        startSimulator(30000); // Every 30 seconds
-        console.log('[SIMULATOR] ✅ Live transaction simulator started (every 30s)');
+        startSimulator(5000); // Every 5 seconds
+        console.log('[SIMULATOR] ✅ Live transaction simulator started (every 5s)');
       } catch (e) {
         console.error('[SIMULATOR] Failed to start:', e.message);
       }
@@ -157,8 +157,12 @@ app.prepare().then(() => {
   });
 
   // Event bus <-> WebSocket bridge:
-  // API routes already call global.__wsBroadcast() directly when emitting events.
-  // No additional bridging needed here.
+  const { eventBus } = require('./src/lib/event-bus.ts');
+  eventBus.subscribeAll((event) => {
+    if (global.__wsBroadcast) {
+      global.__wsBroadcast(event);
+    }
+  });
 
   // System heartbeat every 5 seconds
   heartbeatInterval = setInterval(() => {
