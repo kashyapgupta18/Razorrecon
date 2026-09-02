@@ -7,8 +7,42 @@ import type { CanonicalTransaction } from './types';
 import { Pool } from 'pg';
 
 const TENANT_ID = 'tenant_demo_001';
-const MDR_RATE = 0.02;       // 2% MDR
-const GST_ON_MDR = 0.18;     // 18% GST on MDR
+const MERCHANTS = [
+  'Reliance Retail Ltd', 'Tata Consultancy Services', 'Flipkart Internet Pvt Ltd',
+  'Infosys Technologies', 'Wipro Consumer Care', 'Zomato Food Delivery',
+  'Swiggy Bundl Technologies', 'BigBasket (Innovative Retail)',
+  'PhonePe Pvt Ltd', 'Paytm E-Commerce', 'Myntra Designs Pvt Ltd',
+  'Nykaa E-Retail', 'Urban Company', 'Ola Electric Mobility',
+  'MakeMyTrip India', 'BookMyShow', 'Croma (Infiniti Retail)',
+  'Amazon Seller Services', 'Zerodha Broking Ltd', 'Razorpay Software Pvt Ltd',
+  'PolicyBazaar Insurance', 'Lenskart Solutions', 'Sugar Cosmetics Pvt Ltd',
+  'Mamaearth (Honasa Consumer)', 'boAt Lifestyle', 'Dunzo Digital Pvt Ltd',
+  'JioMart Digital', 'CRED', 'Groww Fintech Pvt Ltd', 'Meesho Inc',
+  'FirstCry (BrainBees Solutions)', 'Haldiram Snacks Pvt Ltd',
+  'Titan Company Ltd', 'Asian Paints Ltd', 'Jubilant FoodWorks (Dominos)',
+  'Burger King India', 'PVR INOX Ltd', 'Decathlon Sports India',
+  'IKEA India Pvt Ltd', 'Pepperfry Home Furnishing'
+];
+
+const ORDER_DESCRIPTIONS = [
+  'Monthly SaaS subscription', 'E-commerce order fulfillment', 'Food delivery commission',
+  'Premium membership renewal', 'Ad campaign payment', 'Insurance premium collection',
+  'Travel booking confirmation', 'Event ticket purchase', 'Electronics purchase',
+  'Grocery order settlement', 'Fashion marketplace sale', 'Cloud hosting charges',
+  'Logistics & delivery fees', 'Digital marketing services', 'Software license renewal',
+  'Consulting services payment', 'Raw material procurement', 'Office supplies purchase',
+  'Employee reimbursement', 'Vendor invoice settlement', 'Franchise royalty payment',
+  'Utility bill collection', 'Investment advisory fees', 'Annual maintenance contract',
+  'Training program enrollment', 'Bulk merchandise order', 'Seasonal campaign payment',
+  'Customer refund processing', 'Warranty claim settlement', 'Platform fee collection'
+];
+
+const BANK_NARRATIONS = [
+  'NEFT/RAZORPAY/SETTLEMENT', 'RTGS/RAZORPAY/BATCH', 'IMPS/PGSETTLE/RAZORPAY',
+  'NEFT/PAYIN/RAZORPAY', 'RTGS/MERCHANT/SETTLEMENT', 'IMPS/RECON/RZPSETL'
+];
+
+function pickRandom<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 
 function genId(prefix: string) { return `${prefix}_${uuidv4().slice(0, 12)}`; }
 function paise(rupees: number) { return Math.round(rupees * 100); }
@@ -29,6 +63,9 @@ interface SeedRecord {
   settlement: CanonicalTransaction | null;
   bankEntry?: { utr: string; credit_minor: number; date: string; description: string };
 }
+
+const MDR_RATE = 0.02;       // 2% MDR
+const GST_ON_MDR = 0.18;     // 18% GST on MDR
 
 export function generateSyntheticData() {
   const records: SeedRecord[] = [];
@@ -57,7 +94,7 @@ export function generateSyntheticData() {
         payment_id: payId, order_id: orderId, refund_id: null,
         settlement_id: setlId, utr, method, status: 'captured',
         event_time: eventTime, settlement_time: settlementDate(eventTime),
-        counterparty: `merchant_${i}`, description: `Payment for Order ${orderId}`,
+        counterparty: MERCHANTS[i % MERCHANTS.length], description: `${pickRandom(ORDER_DESCRIPTIONS)} — ${MERCHANTS[i % MERCHANTS.length]}`,
         raw_payload_hash: uuidv4(), created_at: eventTime,
         ground_truth_outcome: 'MATCH', ground_truth_target_id: setlId
       },
@@ -68,11 +105,11 @@ export function generateSyntheticData() {
         payment_id: payId, order_id: null, refund_id: null,
         settlement_id: setlId, utr, method: 'neft', status: 'settled',
         event_time: settlementDate(eventTime), settlement_time: settlementDate(eventTime),
-        counterparty: `merchant_${i}`, description: `Settlement ${setlId}`,
+        counterparty: MERCHANTS[i % MERCHANTS.length], description: `Settlement payout — ${MERCHANTS[i % MERCHANTS.length]}`,
         raw_payload_hash: uuidv4(), created_at: settlementDate(eventTime),
         ground_truth_outcome: 'MATCH', ground_truth_target_id: payId
       },
-      bankEntry: { utr, credit_minor: net, date: settlementDate(eventTime).slice(0,10), description: `NEFT-${utr}-RAZORPAY` }
+      bankEntry: { utr, credit_minor: net, date: settlementDate(eventTime).slice(0,10), description: `${pickRandom(BANK_NARRATIONS)}/${utr}/${MERCHANTS[i % MERCHANTS.length].toUpperCase().slice(0,15)}` }
     });
   }
 
@@ -101,7 +138,7 @@ export function generateSyntheticData() {
           payment_id: payId, order_id: genId('order'), refund_id: null,
           settlement_id: setlId, utr: null, method: 'card', status: 'captured',
           event_time: eventTime, settlement_time: settlementDate(eventTime),
-          counterparty: `batch_merchant_${b}`, description: `Batched payment ${p}`,
+          counterparty: MERCHANTS[(b * 2 + p + 25) % MERCHANTS.length], description: `Batched payment — ${pickRandom(ORDER_DESCRIPTIONS)}`,
           raw_payload_hash: uuidv4(), created_at: eventTime,
           ground_truth_outcome: 'PARTIAL', ground_truth_target_id: setlId
         },
@@ -117,12 +154,12 @@ export function generateSyntheticData() {
         payment_id: null, order_id: null, refund_id: null,
         settlement_id: setlId, utr, method: 'neft', status: 'settled',
         event_time: settlementDate(eventTime), settlement_time: settlementDate(eventTime),
-        counterparty: `batch_merchant_${b}`, description: `Batch settlement ${setlId}`,
+        counterparty: MERCHANTS[(b * 2 + 25) % MERCHANTS.length], description: `Batch settlement payout — ${MERCHANTS[(b * 2 + 25) % MERCHANTS.length]}`,
         raw_payload_hash: uuidv4(), created_at: settlementDate(eventTime),
         ground_truth_outcome: 'PARTIAL', ground_truth_target_id: null
       },
       settlement: null,
-      bankEntry: { utr, credit_minor: batchTotal, date: settlementDate(eventTime).slice(0,10), description: `NEFT-${utr}-RAZORPAY-BATCH` }
+      bankEntry: { utr, credit_minor: batchTotal, date: settlementDate(eventTime).slice(0,10), description: `${pickRandom(BANK_NARRATIONS)}/${utr}/BATCH-SETTLE` }
     });
   }
 
@@ -145,8 +182,8 @@ export function generateSyntheticData() {
         settlement_id: null, utr: null, method: r < 3 ? 'upi' : 'card',
         status: 'refunded',
         event_time: eventTime, settlement_time: null,
-        counterparty: `refund_customer_${r}`,
-        description: r < 3 ? `Full refund for ${payId}` : `Partial refund (50%) for ${payId}`,
+        counterparty: MERCHANTS[(r + 35) % MERCHANTS.length],
+        description: r < 3 ? `Full refund — ${pickRandom(ORDER_DESCRIPTIONS)}` : `Partial refund (50%) — ${pickRandom(ORDER_DESCRIPTIONS)}`,
         raw_payload_hash: uuidv4(), created_at: eventTime,
         ground_truth_outcome: 'MATCH', ground_truth_target_id: payId
       },
@@ -177,7 +214,7 @@ export function generateSyntheticData() {
         settlement_id: genId('setl'), utr: `UTRFEE${Date.now()}${f}`, method: f === 4 ? 'upi' : 'card',
         status: 'captured',
         event_time: randomDate(10), settlement_time: null,
-        counterparty: `fee_merchant_${f}`, description: desc,
+        counterparty: MERCHANTS[(f + 30) % MERCHANTS.length], description: `${desc} — ${MERCHANTS[(f + 30) % MERCHANTS.length]}`,
         raw_payload_hash: uuidv4(), created_at: randomDate(10),
         ground_truth_outcome: 'MATCH', ground_truth_target_id: null
       },
@@ -202,7 +239,7 @@ export function generateSyntheticData() {
       payment_id: payId, order_id: genId('order'), refund_id: null,
       settlement_id: genId('setl'), utr: null, method: 'upi', status: 'captured',
       event_time: eventTime, settlement_time: null,
-      counterparty: `dup_merchant_${d}`, description: `Duplicate webhook event #${d}`,
+      counterparty: MERCHANTS[(d + 20) % MERCHANTS.length], description: `Duplicate webhook — ${pickRandom(ORDER_DESCRIPTIONS)}`,
       raw_payload_hash: uuidv4(), created_at: eventTime,
       ground_truth_outcome: 'DUPLICATE', ground_truth_target_id: null
     };
@@ -213,7 +250,7 @@ export function generateSyntheticData() {
     records.push({
       payment: {
         ...base, id: genId('txn'), // different txn id but same payment_id
-        description: `DUPLICATE of ${payId}`,
+        description: `DUPLICATE of ${payId} — ${MERCHANTS[(d + 20) % MERCHANTS.length]}`,
         created_at: new Date(new Date(eventTime).getTime() + 5000).toISOString()
       },
       settlement: null
@@ -235,7 +272,7 @@ export function generateSyntheticData() {
         settlement_id: genId('setl'), utr: `UTRMISSING${m}${Date.now()}`,
         method: 'neft', status: 'settled',
         event_time: randomDate(5), settlement_time: randomDate(5),
-        counterparty: `missing_merchant_${m}`, description: 'Settlement with no matching payment',
+        counterparty: MERCHANTS[(m + 15) % MERCHANTS.length], description: `Settlement with no matching payment — ${MERCHANTS[(m + 15) % MERCHANTS.length]}`,
         raw_payload_hash: uuidv4(), created_at: randomDate(5),
         ground_truth_outcome: 'UNMATCHED', ground_truth_target_id: null
       },
@@ -253,7 +290,7 @@ export function generateSyntheticData() {
         refund_id: null, settlement_id: null, utr: null, method: 'card',
         status: 'captured',
         event_time: randomDate(3), settlement_time: null,
-        counterparty: `delayed_merchant_${m}`, description: 'Payment awaiting settlement',
+        counterparty: MERCHANTS[(m + 10) % MERCHANTS.length], description: `Payment awaiting settlement — ${pickRandom(ORDER_DESCRIPTIONS)}`,
         raw_payload_hash: uuidv4(), created_at: randomDate(3),
         ground_truth_outcome: 'UNMATCHED', ground_truth_target_id: null
       },
@@ -273,7 +310,7 @@ export function generateSyntheticData() {
       payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
       settlement_id: genId('setl'), utr: `UTRROUND1${Date.now()}`, method: 'card',
       status: 'captured', event_time: randomDate(7), settlement_time: null,
-      counterparty: 'rounding_merchant', description: 'Paise rounding edge case (₹999.99)',
+      counterparty: 'Titan Company Ltd', description: 'Paise rounding edge case (₹999.99) — Titan Company Ltd',
       raw_payload_hash: uuidv4(), created_at: randomDate(7),
       ground_truth_outcome: 'MATCH', ground_truth_target_id: null
     }, settlement: null
@@ -287,7 +324,7 @@ export function generateSyntheticData() {
       payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
       settlement_id: genId('setl'), utr: `UTRROUND2${Date.now()}`, method: 'netbanking',
       status: 'captured', event_time: randomDate(7), settlement_time: null,
-      counterparty: 'variance_merchant', description: '₹0.01 variance edge case',
+      counterparty: 'Asian Paints Ltd', description: '₹0.01 variance edge case — Asian Paints Ltd',
       raw_payload_hash: uuidv4(), created_at: randomDate(7),
       ground_truth_outcome: 'MATCH', ground_truth_target_id: null
     }, settlement: null
@@ -301,7 +338,7 @@ export function generateSyntheticData() {
       payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
       settlement_id: genId('setl'), utr: `UTRINTL${Date.now()}`, method: 'card',
       status: 'captured', event_time: randomDate(7), settlement_time: null,
-      counterparty: 'intl_merchant', description: 'International card converted to INR',
+      counterparty: 'Amazon Seller Services', description: 'International card converted to INR — Amazon Seller Services',
       raw_payload_hash: uuidv4(), created_at: randomDate(7),
       ground_truth_outcome: 'MATCH', ground_truth_target_id: null
     }, settlement: null
@@ -322,7 +359,7 @@ export function generateSyntheticData() {
       payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
       settlement_id: null, utr: null, method: 'upi', status: 'captured',
       event_time: ambigTime, settlement_time: null,
-      counterparty: 'ambiguous_merchant_A', description: 'Ambiguous: same amount, same day as merchant B',
+      counterparty: 'Zomato Food Delivery', description: 'Ambiguous: same amount, same day as Swiggy',
       raw_payload_hash: uuidv4(), created_at: ambigTime,
       ground_truth_outcome: 'UNMATCHED', ground_truth_target_id: null
     }, settlement: null
@@ -336,7 +373,7 @@ export function generateSyntheticData() {
       payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
       settlement_id: null, utr: null, method: 'upi', status: 'captured',
       event_time: ambigTime, settlement_time: null,
-      counterparty: 'ambiguous_merchant_B', description: 'Ambiguous: same amount, same day as merchant A',
+      counterparty: 'Swiggy Bundl Technologies', description: 'Ambiguous: same amount, same day as Zomato',
       raw_payload_hash: uuidv4(), created_at: ambigTime,
       ground_truth_outcome: 'UNMATCHED', ground_truth_target_id: null
     }, settlement: null
@@ -350,7 +387,7 @@ export function generateSyntheticData() {
       payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
       settlement_id: null, utr: null, method: 'card', status: 'captured',
       event_time: ambigTime, settlement_time: null,
-      counterparty: 'overlap_merchant', description: 'Ambiguous: amount overlaps with other records',
+      counterparty: 'Dunzo Digital Pvt Ltd', description: 'Ambiguous: amount overlaps with Zomato/Swiggy records',
       raw_payload_hash: uuidv4(), created_at: ambigTime,
       ground_truth_outcome: 'UNMATCHED', ground_truth_target_id: null
     }, settlement: null
@@ -381,7 +418,7 @@ export async function seedDatabase(db: Pool) {
   }
 
   // Insert tenant
-  await db.query('INSERT INTO tenants (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING', [tenantId, 'Demo Merchant Pvt Ltd']);
+  await db.query('INSERT INTO tenants (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING', [tenantId, 'RazorRecon Finance Pvt Ltd']);
 
   // Insert demo user
   await db.query('INSERT INTO users (id, tenant_id, email, name, role) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING', [

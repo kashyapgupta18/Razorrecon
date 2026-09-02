@@ -30,7 +30,70 @@ app.prepare().then(() => {
     }
   });
   const { initSchema } = require('./src/lib/db.ts');
-  initSchema().then(() => console.log('[DB] Schema initialized successfully')).catch(console.error);
+  const { getDb } = require('./src/lib/db.ts');
+  const { seedDatabase } = require('./src/lib/seed.ts');
+  const { startSimulator } = require('./src/lib/live-simulator.ts');
+  const { runReconciliation } = require('./src/lib/reconciliation-engine.ts');
+
+  initSchema()
+    .then(async () => {
+      console.log('[DB] Schema initialized successfully');
+
+      // Auto-seed realistic data on startup
+      try {
+        const db = getDb();
+        const result = await seedDatabase(db);
+        if (result.alreadySeeded) {
+          console.log(`[SEED] Database already seeded (${result.count} records)`);
+        } else {
+          console.log(`[SEED] ✅ Auto-seeded ${result.count} realistic Indian financial records`);
+          
+          // Run initial reconciliation on freshly seeded data
+          try {
+            const reconResult = await runReconciliation('tenant_demo_001');
+            console.log(`[RECON] ✅ Initial reconciliation complete — ${reconResult.matchRate?.toFixed(1)}% match rate`);
+          } catch (e) {
+            console.error('[RECON] Initial reconciliation failed:', e.message);
+          }
+        }
+      } catch (e) {
+        console.error('[SEED] Auto-seed failed:', e.message);
+      }
+
+      // Auto-start live simulator (generates a new transaction every 30 seconds)
+      try {
+        startSimulator(30000); // Every 30 seconds
+        console.log('[SIMULATOR] ✅ Live transaction simulator started (every 30s)');
+      } catch (e) {
+        console.error('[SIMULATOR] Failed to start:', e.message);
+      }
+
+      // Auto-run reconciliation every 5 minutes
+      setInterval(async () => {
+        try {
+          const reconResult = await runReconciliation('tenant_demo_001');
+          console.log(`[RECON] Periodic reconciliation — ${reconResult.matchRate?.toFixed(1)}% match rate, ${reconResult.matched} matched, ${reconResult.unmatched} unmatched`);
+          
+          // Broadcast recon result over WebSocket
+          if (global.__wsBroadcast) {
+            global.__wsBroadcast({
+              channel: 'system:reconciliation',
+              data: {
+                type: 'reconciliation_complete',
+                match_rate: reconResult.matchRate,
+                matched: reconResult.matched,
+                unmatched: reconResult.unmatched
+              },
+              timestamp: new Date().toISOString(),
+              id: `recon_auto_${Date.now()}`
+            });
+          }
+        } catch (e) {
+          console.error('[RECON] Periodic reconciliation failed:', e.message);
+        }
+      }, 5 * 60 * 1000); // Every 5 minutes
+    })
+    .catch(console.error);
 
   const server = createServer((req, res) => {
     const parsedUrl = parse(req.url, true);

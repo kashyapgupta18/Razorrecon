@@ -16,9 +16,26 @@ function genId(prefix: string) { return `${prefix}_${uuidv4().slice(0, 12)}`; }
 function paise(rupees: number) { return Math.round(rupees * 100); }
 
 const MERCHANTS = [
-  'ShopEase India', 'QuickBuy Online', 'FreshMart Express', 'TechGadgets Hub',
-  'FoodZone Delivery', 'StyleWear Fashion', 'BookWorm Store', 'HealthPlus Pharmacy',
-  'AutoParts Direct', 'GreenGrocer Fresh', 'ElectroniX World', 'HomeDecor Pro'
+  'Reliance Retail Ltd', 'Tata Consultancy Services', 'Flipkart Internet Pvt Ltd',
+  'Infosys Technologies', 'Wipro Consumer Care', 'Zomato Food Delivery',
+  'Swiggy Bundl Technologies', 'BigBasket (Innovative Retail)',
+  'PhonePe Pvt Ltd', 'Paytm E-Commerce', 'Myntra Designs Pvt Ltd',
+  'Nykaa E-Retail', 'Urban Company', 'Ola Electric Mobility',
+  'MakeMyTrip India', 'BookMyShow', 'Croma (Infiniti Retail)',
+  'Amazon Seller Services', 'Zerodha Broking Ltd', 'Razorpay Software Pvt Ltd',
+  'PolicyBazaar Insurance', 'Lenskart Solutions', 'Sugar Cosmetics Pvt Ltd',
+  'Mamaearth (Honasa Consumer)', 'boAt Lifestyle', 'Dunzo Digital Pvt Ltd',
+  'JioMart Digital', 'CRED', 'Groww Fintech Pvt Ltd', 'Meesho Inc',
+  'FirstCry (BrainBees Solutions)', 'Haldiram Snacks Pvt Ltd',
+  'Titan Company Ltd', 'Asian Paints Ltd', 'Jubilant FoodWorks (Dominos)',
+  'Burger King India', 'PVR INOX Ltd', 'Decathlon Sports India',
+  'IKEA India Pvt Ltd', 'Pepperfry Home Furnishing'
+];
+
+const ORDER_TYPES = [
+  'E-commerce order', 'Food delivery', 'Subscription renewal', 'Travel booking',
+  'Insurance premium', 'Grocery purchase', 'Electronics order', 'Fashion purchase',
+  'Utility payment', 'SaaS invoice', 'Movie ticket', 'Cab fare settlement'
 ];
 
 const METHODS: Array<'upi' | 'card' | 'netbanking' | 'wallet'> = ['upi', 'card', 'netbanking', 'wallet'];
@@ -64,7 +81,7 @@ async function generateLiveTransaction() {
       [txnId, TENANT_ID, 'razorpay_live', type, amount, 'INR', fee, tax, net,
       payId, orderId, type === 'refund' ? genId('rfnd') : null, setlId, utr,
       method, status, now, type === 'settlement' ? now : null,
-      merchant, `Live ${type}: ${merchant}`, uuidv4(), now]
+      merchant, `Live ${type}: ${ORDER_TYPES[Math.floor(Math.random() * ORDER_TYPES.length)]} — ${merchant}`, uuidv4(), now]
     );
 
     txnCounter++;
