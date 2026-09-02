@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-
-const TENANT_ID = 'tenant_demo_001';
+import { getTenantId } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const db = getDb();
 
     const txnStats = (await db.query(`
@@ -17,7 +19,7 @@ export async function GET() {
         SUM(amount_minor) as total_volume,
         AVG(amount_minor) as avg_amount
       FROM canonical_transactions WHERE tenant_id = $1
-    `, [TENANT_ID])).rows[0] as Record<string, unknown>;
+    `, [tenantId])).rows[0] as Record<string, unknown>;
 
     const matchStats = (await db.query(`
       SELECT COUNT(*) as total_matches,
@@ -26,7 +28,8 @@ export async function GET() {
         AVG(confidence) as avg_confidence,
         AVG(processing_time_ms) as avg_latency
       FROM match_candidates
-    `)).rows[0] as Record<string, unknown>;
+      WHERE recon_run_id IN (SELECT id FROM recon_runs WHERE tenant_id = $1)
+    `, [tenantId])).rows[0] as Record<string, unknown>;
 
     const excStats = (await db.query(`
       SELECT COUNT(*) as total,
@@ -38,33 +41,33 @@ export async function GET() {
         SUM(CASE WHEN severity='high' THEN 1 ELSE 0 END) as high,
         SUM(CASE WHEN status='open' THEN amount_minor ELSE 0 END) as open_exposure
       FROM exceptions WHERE tenant_id = $1
-    `, [TENANT_ID])).rows[0] as Record<string, unknown>;
+    `, [tenantId])).rows[0] as Record<string, unknown>;
 
     const excByType = (await db.query(`
       SELECT type, COUNT(*) as count, SUM(amount_minor) as total_amount
       FROM exceptions WHERE tenant_id = $1
       GROUP BY type ORDER BY count DESC
-    `, [TENANT_ID])).rows as Record<string, unknown>[];
+    `, [tenantId])).rows as Record<string, unknown>[];
 
     const lastRun = (await db.query(
-      'SELECT * FROM recon_runs WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT 1', [TENANT_ID]
+      'SELECT * FROM recon_runs WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT 1', [tenantId]
     )).rows[0] as Record<string, unknown>;
 
     const health = (await db.query(
-      'SELECT * FROM health_scores WHERE tenant_id = $1 ORDER BY calculated_at DESC LIMIT 1', [TENANT_ID]
+      'SELECT * FROM health_scores WHERE tenant_id = $1 ORDER BY calculated_at DESC LIMIT 1', [tenantId]
     )).rows[0] as Record<string, unknown>;
 
     const anomalies = (await db.query(
-      'SELECT * FROM anomaly_signals WHERE tenant_id = $1 ORDER BY score DESC', [TENANT_ID]
+      'SELECT * FROM anomaly_signals WHERE tenant_id = $1 ORDER BY score DESC', [tenantId]
     )).rows as Record<string, unknown>[];
 
     const recentAudit = (await db.query(
-      'SELECT * FROM audit_events WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20', [TENANT_ID]
+      'SELECT * FROM audit_events WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20', [tenantId]
     )).rows as Record<string, unknown>[];
 
     // Generate trend data from recon runs
     const reconRuns = (await db.query(
-      'SELECT * FROM recon_runs WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT 30', [TENANT_ID]
+      'SELECT * FROM recon_runs WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT 30', [tenantId]
     )).rows as Record<string, unknown>[];
 
     // Settlement delay calculation (Postgres specific)
@@ -74,14 +77,14 @@ export async function GET() {
       ) as avg_delay_hours
       FROM canonical_transactions
       WHERE tenant_id = $1 AND settlement_time IS NOT NULL AND type = 'payment'
-    `, [TENANT_ID])).rows[0] as Record<string, unknown>;
+    `, [tenantId])).rows[0] as Record<string, unknown>;
 
     // Method distribution
     const methodDist = (await db.query(`
       SELECT method, COUNT(*) as count, SUM(amount_minor) as volume
       FROM canonical_transactions WHERE tenant_id = $1 AND type = 'payment'
       GROUP BY method ORDER BY count DESC
-    `, [TENANT_ID])).rows as Record<string, unknown>[];
+    `, [tenantId])).rows as Record<string, unknown>[];
 
     return NextResponse.json({
       transactions: {

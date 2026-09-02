@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { runReconciliation } from '@/lib/reconciliation-engine';
-
-const TENANT_ID = 'tenant_demo_001';
+import { getTenantId } from '@/lib/auth-server';
 
 export async function POST() {
   try {
-    const result = await runReconciliation(TENANT_ID);
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const result = await runReconciliation(tenantId);
 
     // Broadcast over WS
     if (typeof globalThis !== 'undefined' && (globalThis as any).__wsBroadcast) {

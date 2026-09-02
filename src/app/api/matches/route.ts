@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-
-const TENANT_ID = 'tenant_demo_001';
+import { getTenantId } from '@/lib/auth-server';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { searchParams } = new URL(req.url);
     const decision = searchParams.get('decision');
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -14,7 +16,7 @@ export async function GET(req: Request) {
     
     // Get latest run
     const lastRunRes = await db.query(
-      'SELECT id FROM recon_runs WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT 1', [TENANT_ID]
+      'SELECT id FROM recon_runs WHERE tenant_id = $1 ORDER BY started_at DESC LIMIT 1', [tenantId]
     );
     const lastRun = lastRunRes.rows[0];
 

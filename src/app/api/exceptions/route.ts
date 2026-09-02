@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-
-const TENANT_ID = 'tenant_demo_001';
+import { getTenantId } from '@/lib/auth-server';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
     
@@ -17,7 +19,7 @@ export async function GET(req: Request) {
       LEFT JOIN canonical_transactions ct ON e.transaction_id = ct.id
       WHERE e.tenant_id = $1
     `;
-    const params: any[] = [TENANT_ID];
+    const params: any[] = [tenantId];
 
     if (status) {
       query += ` AND e.status = $2`;

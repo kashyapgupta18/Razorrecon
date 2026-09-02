@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-
-const TENANT_ID = 'tenant_demo_001';
+import { getTenantId } from '@/lib/auth-server';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const db = getDb();
-    const payments = (await db.query("SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type = 'payment'", [TENANT_ID])).rows;
-    const refunds = (await db.query("SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type = 'refund'", [TENANT_ID])).rows;
-    const settlements = (await db.query("SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type = 'settlement'", [TENANT_ID])).rows;
+    const payments = (await db.query("SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type = 'payment'", [tenantId])).rows;
+    const refunds = (await db.query("SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type = 'refund'", [tenantId])).rows;
+    const settlements = (await db.query("SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type = 'settlement'", [tenantId])).rows;
 
     let totalGross = 0;
     let totalFees = 0;

@@ -8,7 +8,7 @@ import { getDb } from './db';
 import { eventBus } from './event-bus';
 import { runReconciliation } from './reconciliation-engine';
 
-const TENANT_ID = 'tenant_demo_001';
+// Remove global TENANT_ID
 const MDR_RATE = 0.02;
 const GST_ON_MDR = 0.18;
 
@@ -40,10 +40,10 @@ const ORDER_TYPES = [
 
 const METHODS: Array<'upi' | 'card' | 'netbanking' | 'wallet'> = ['upi', 'card', 'netbanking', 'wallet'];
 
-let simulatorInterval: ReturnType<typeof setInterval> | null = null;
-let txnCounter = 0;
+const simulatorIntervals = new Map<string, ReturnType<typeof setInterval>>();
+const txnCounters = new Map<string, number>();
 
-async function generateLiveTransaction() {
+async function generateLiveTransaction(tenantId: string) {
   const db = getDb();
   const amount = paise(100 + Math.floor(Math.random() * 15000));
   const fee = Math.round(amount * MDR_RATE);
@@ -69,6 +69,7 @@ async function generateLiveTransaction() {
     status = 'refunded';
   }
 
+  let txnCounter = txnCounters.get(tenantId) || 0;
   const setlId = type === 'settlement' ? genId('setl') : (Math.random() > 0.3 ? genId('setl') : null);
   const utr = type === 'settlement' ? `UTR${Date.now()}${txnCounter}` : null;
 
@@ -78,22 +79,23 @@ async function generateLiveTransaction() {
        payment_id, order_id, refund_id, settlement_id, utr, method, status,
        event_time, settlement_time, counterparty, description, raw_payload_hash, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)`,
-      [txnId, TENANT_ID, 'razorpay_live', type, amount, 'INR', fee, tax, net,
+      [txnId, tenantId, 'razorpay_live', type, amount, 'INR', fee, tax, net,
       payId, orderId, type === 'refund' ? genId('rfnd') : null, setlId, utr,
       method, status, now, type === 'settlement' ? now : null,
       merchant, `Live ${type}: ${ORDER_TYPES[Math.floor(Math.random() * ORDER_TYPES.length)]} — ${merchant}`, uuidv4(), now]
     );
 
     txnCounter++;
+    txnCounters.set(tenantId, txnCounter);
 
     eventBus.emit('txn:ingested', {
-      id: txnId, type, amount_minor: amount, method, merchant,
+      id: txnId, tenant_id: tenantId, type, amount_minor: amount, method, merchant,
       status, timestamp: now, counter: txnCounter
     });
 
     // Every 5 transactions, auto-run reconciliation
     if (txnCounter % 5 === 0) {
-      const result = await runReconciliation(TENANT_ID);
+      const result = await runReconciliation(tenantId);
       eventBus.emit('recon:completed', {
         runId: result.runId, matchRate: result.matchRate,
         matched: result.matched, unmatched: result.unmatched,
@@ -107,42 +109,49 @@ async function generateLiveTransaction() {
   }
 }
 
-export function startSimulator(intervalMs: number = 3000): { stop: () => void } {
-  if (simulatorInterval) return { stop: stopSimulator };
-  txnCounter = 0;
+export function startSimulator(tenantId: string, intervalMs: number = 3000): { stop: () => void } {
+  if (simulatorIntervals.has(tenantId)) return { stop: () => stopSimulator(tenantId) };
+  txnCounters.set(tenantId, 0);
 
-  simulatorInterval = setInterval(() => {
-    generateLiveTransaction().catch(console.error);
+  const interval = setInterval(() => {
+    generateLiveTransaction(tenantId).catch(console.error);
   }, intervalMs);
+  
+  simulatorIntervals.set(tenantId, interval);
 
   eventBus.emit('system:heartbeat', {
+    tenant_id: tenantId,
     type: 'simulator_started',
     interval_ms: intervalMs,
     message: `Live transaction simulator started (every ${intervalMs / 1000}s)`
   });
 
-  return { stop: stopSimulator };
+  return { stop: () => stopSimulator(tenantId) };
 }
 
-export function stopSimulator(): void {
-  if (simulatorInterval) {
-    clearInterval(simulatorInterval);
-    simulatorInterval = null;
+export function stopSimulator(tenantId: string): void {
+  const interval = simulatorIntervals.get(tenantId);
+  if (interval) {
+    clearInterval(interval);
+    simulatorIntervals.delete(tenantId);
+    
+    const count = txnCounters.get(tenantId) || 0;
     eventBus.emit('system:heartbeat', {
+      tenant_id: tenantId,
       type: 'simulator_stopped',
-      total_generated: txnCounter,
-      message: `Simulator stopped after generating ${txnCounter} transactions`
+      total_generated: count,
+      message: `Simulator stopped after generating ${count} transactions`
     });
   }
 }
 
-export function isSimulatorRunning(): boolean {
-  return simulatorInterval !== null;
+export function isSimulatorRunning(tenantId: string): boolean {
+  return simulatorIntervals.has(tenantId);
 }
 
-export function getSimulatorStats() {
+export function getSimulatorStats(tenantId: string) {
   return {
-    running: simulatorInterval !== null,
-    totalGenerated: txnCounter,
+    running: simulatorIntervals.has(tenantId),
+    totalGenerated: txnCounters.get(tenantId) || 0,
   };
 }

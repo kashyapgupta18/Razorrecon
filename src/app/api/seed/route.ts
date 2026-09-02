@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
 import { seedDatabase } from '@/lib/seed';
 import { getDb } from '@/lib/db';
+import { getTenantId } from '@/lib/auth-server';
 
 export async function POST() {
   try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const db = getDb();
-    const result = await seedDatabase(db);
+    const result = await seedDatabase(db, tenantId);
     
     // Broadcast if new data generated
     if (!result.alreadySeeded && typeof globalThis !== 'undefined' && (globalThis as any).__wsBroadcast) {

@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { processAIQuery } from '@/lib/ai-engine';
-
-const TENANT_ID = 'tenant_demo_001';
+import { getTenantId } from '@/lib/auth-server';
 
 export async function POST(req: Request) {
   try {
+    const tenantId = await getTenantId();
+    if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
     const { query } = await req.json();
     if (!query) return NextResponse.json({ error: 'Missing query' }, { status: 400 });
 
-    const result = await processAIQuery(TENANT_ID, query);
+    const result = await processAIQuery(tenantId, query);
 
     // Broadcast over WS
     if (typeof globalThis !== 'undefined' && (globalThis as any).__wsBroadcast) {

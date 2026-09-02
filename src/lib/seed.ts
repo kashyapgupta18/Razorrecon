@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { CanonicalTransaction } from './types';
 import { Pool } from 'pg';
 
-const TENANT_ID = 'tenant_demo_001';
+// const tenantId = 'tenant_demo_001'; // Removed global constant
 const MERCHANTS = [
   'Reliance Retail Ltd', 'Tata Consultancy Services', 'Flipkart Internet Pvt Ltd',
   'Infosys Technologies', 'Wipro Consumer Care', 'Zomato Food Delivery',
@@ -67,7 +67,7 @@ interface SeedRecord {
 const MDR_RATE = 0.02;       // 2% MDR
 const GST_ON_MDR = 0.18;     // 18% GST on MDR
 
-export function generateSyntheticData() {
+export function generateSyntheticData(tenantId: string) {
   const records: SeedRecord[] = [];
 
   // ============================================================
@@ -88,7 +88,7 @@ export function generateSyntheticData() {
 
     records.push({
       payment: {
-        id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+        id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
         type: 'payment', amount_minor: amount, currency: 'INR',
         fee_minor: fee, tax_minor: tax, net_minor: net,
         payment_id: payId, order_id: orderId, refund_id: null,
@@ -99,7 +99,7 @@ export function generateSyntheticData() {
         ground_truth_outcome: 'MATCH', ground_truth_target_id: setlId
       },
       settlement: {
-        id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+        id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
         type: 'settlement', amount_minor: net, currency: 'INR',
         fee_minor: 0, tax_minor: 0, net_minor: net,
         payment_id: payId, order_id: null, refund_id: null,
@@ -132,7 +132,7 @@ export function generateSyntheticData() {
 
       records.push({
         payment: {
-          id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+          id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
           type: 'payment', amount_minor: amount, currency: 'INR',
           fee_minor: fee, tax_minor: tax, net_minor: net,
           payment_id: payId, order_id: genId('order'), refund_id: null,
@@ -148,7 +148,7 @@ export function generateSyntheticData() {
     // One settlement for the batch
     records.push({
       payment: {
-        id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+        id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
         type: 'settlement', amount_minor: batchTotal, currency: 'INR',
         fee_minor: 0, tax_minor: 0, net_minor: batchTotal,
         payment_id: null, order_id: null, refund_id: null,
@@ -175,7 +175,7 @@ export function generateSyntheticData() {
 
     records.push({
       payment: {
-        id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+        id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
         type: 'refund', amount_minor: refundAmount, currency: 'INR',
         fee_minor: 0, tax_minor: 0, net_minor: -refundAmount,
         payment_id: payId, order_id: genId('order'), refund_id: refundId,
@@ -207,7 +207,7 @@ export function generateSyntheticData() {
 
     records.push({
       payment: {
-        id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+        id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
         type: 'payment', amount_minor: amount, currency: 'INR',
         fee_minor: fee, tax_minor: tax, net_minor: amount - fee - tax,
         payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
@@ -233,7 +233,7 @@ export function generateSyntheticData() {
     const eventTime = randomDate(12);
 
     const base: CanonicalTransaction = {
-      id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+      id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
       type: 'payment', amount_minor: amount, currency: 'INR',
       fee_minor: fee, tax_minor: tax, net_minor: amount - fee - tax,
       payment_id: payId, order_id: genId('order'), refund_id: null,
@@ -264,7 +264,7 @@ export function generateSyntheticData() {
   for (let m = 0; m < 2; m++) {
     records.push({
       payment: {
-        id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+        id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
         type: 'settlement', amount_minor: paise(3000 + Math.random() * 2000),
         currency: 'INR', fee_minor: 0, tax_minor: 0,
         net_minor: paise(3000 + Math.random() * 2000),
@@ -283,7 +283,7 @@ export function generateSyntheticData() {
   for (let m = 0; m < 2; m++) {
     records.push({
       payment: {
-        id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+        id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
         type: 'payment', amount_minor: paise(2000 + Math.random() * 3000),
         currency: 'INR', fee_minor: paise(50), tax_minor: paise(9),
         net_minor: paise(1941), payment_id: genId('pay'), order_id: genId('order'),
@@ -304,7 +304,7 @@ export function generateSyntheticData() {
   // Paise rounding
   records.push({
     payment: {
-      id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+      id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
       type: 'payment', amount_minor: 99999, currency: 'INR', // ₹999.99
       fee_minor: 2000, tax_minor: 360, net_minor: 97639,
       payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
@@ -318,7 +318,7 @@ export function generateSyntheticData() {
   // ₹0.01 variance
   records.push({
     payment: {
-      id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+      id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
       type: 'payment', amount_minor: 500001, currency: 'INR', // ₹5000.01
       fee_minor: 10000, tax_minor: 1800, net_minor: 488201,
       payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
@@ -332,7 +332,7 @@ export function generateSyntheticData() {
   // International card INR conversion
   records.push({
     payment: {
-      id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+      id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
       type: 'payment', amount_minor: 750000, currency: 'INR', // ₹7500 (converted from $90)
       fee_minor: 22500, tax_minor: 4050, net_minor: 723450,
       payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
@@ -352,7 +352,7 @@ export function generateSyntheticData() {
   // Same amount, same day, different merchants
   records.push({
     payment: {
-      id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+      id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
       type: 'payment', amount_minor: ambigAmount, currency: 'INR',
       fee_minor: Math.round(ambigAmount * MDR_RATE), tax_minor: Math.round(ambigAmount * MDR_RATE * GST_ON_MDR),
       net_minor: ambigAmount - Math.round(ambigAmount * MDR_RATE) - Math.round(ambigAmount * MDR_RATE * GST_ON_MDR),
@@ -366,7 +366,7 @@ export function generateSyntheticData() {
   });
   records.push({
     payment: {
-      id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+      id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
       type: 'payment', amount_minor: ambigAmount, currency: 'INR',
       fee_minor: Math.round(ambigAmount * MDR_RATE), tax_minor: Math.round(ambigAmount * MDR_RATE * GST_ON_MDR),
       net_minor: ambigAmount - Math.round(ambigAmount * MDR_RATE) - Math.round(ambigAmount * MDR_RATE * GST_ON_MDR),
@@ -381,7 +381,7 @@ export function generateSyntheticData() {
   // Partial amount overlap
   records.push({
     payment: {
-      id: genId('txn'), tenant_id: TENANT_ID, source: 'razorpay',
+      id: genId('txn'), tenant_id: tenantId, source: 'razorpay',
       type: 'payment', amount_minor: paise(5001), currency: 'INR', // ₹50.01 off from ambig
       fee_minor: paise(100), tax_minor: paise(18), net_minor: paise(4883),
       payment_id: genId('pay'), order_id: genId('order'), refund_id: null,
@@ -393,11 +393,11 @@ export function generateSyntheticData() {
     }, settlement: null
   });
 
-  return { records, tenantId: TENANT_ID };
+  return { records, tenantId };
 }
 
-export async function seedDatabase(db: Pool) {
-  const { records, tenantId } = generateSyntheticData();
+export async function seedDatabase(db: Pool, targetTenantId: string) {
+  const { records, tenantId } = generateSyntheticData(targetTenantId);
 
   // Check if already seeded (50+ means full synthetic data is loaded; a few simulator records shouldn't block)
   const existingRes = await db.query('SELECT COUNT(*) as count FROM canonical_transactions WHERE tenant_id = $1', [tenantId]);
@@ -485,7 +485,7 @@ export async function seedDatabase(db: Pool) {
         await client.query(`INSERT INTO bank_entries 
           (id, tenant_id, date, description, reference, debit_minor, credit_minor, balance_minor, utr_extracted) 
           VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8)`,
-          [genId('bank'), TENANT_ID, rec.bankEntry.date, rec.bankEntry.description,
+          [genId('bank'), tenantId, rec.bankEntry.date, rec.bankEntry.description,
           rec.bankEntry.utr, rec.bankEntry.credit_minor, balance, rec.bankEntry.utr]);
       }
     }

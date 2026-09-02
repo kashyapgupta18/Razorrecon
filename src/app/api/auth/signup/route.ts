@@ -23,16 +23,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
     }
 
-    // Get or create a default tenant for the sake of signup
-    let tenantId = 'default-tenant';
-    const tenantCheck = await pool.query('SELECT id FROM tenants WHERE id = $1', [tenantId]);
-    
-    if (tenantCheck.rows.length === 0) {
-      await pool.query(
-        'INSERT INTO tenants (id, name, config) VALUES ($1, $2, $3)',
-        [tenantId, 'Default Tenant', '{}']
-      );
-    }
+    // Create a unique tenant for the new user
+    const tenantId = `tenant_${uuidv4().slice(0, 8)}`;
+    await pool.query(
+      'INSERT INTO tenants (id, name, config) VALUES ($1, $2, $3)',
+      [tenantId, `${name}'s Tenant`, '{}']
+    );
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
@@ -43,6 +39,9 @@ export async function POST(request: Request) {
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [userId, tenantId, email, name, passwordHash, 'admin']
     );
+
+    // Auto-seed data for the new tenant
+    import('@/lib/seed').then(m => m.seedDatabase(pool, tenantId)).catch(err => console.error('Failed to auto-seed:', err));
 
     // Log signup audit event to Supabase
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
