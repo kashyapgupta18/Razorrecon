@@ -251,6 +251,7 @@ const THEMES = [
   { id: 'dark', label: 'Dark', colors: ['#040914', '#3b82f6'] },
   { id: 'light', label: 'Light', colors: ['#f8fafc', '#2563eb'] },
   { id: 'cyberpunk', label: 'Cyberpunk', colors: ['#0a0014', '#ec4899'] },
+  { id: 'aurora', label: 'Aurora', colors: ['#022c22', '#10b981'] },
 ];
 
 function ThemeSwitcher() {
