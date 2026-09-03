@@ -34,8 +34,6 @@ function BenchmarkContent() {
   const runBenchmark = async () => {
     setLoading(true);
     try {
-      // Ensure data is seeded first
-      await fetch('/api/seed', { method: 'POST' });
       addToast('Running benchmark suite...', 'info');
       const r = await fetch('/api/benchmark', { method: 'POST' });
       const d = await r.json();
