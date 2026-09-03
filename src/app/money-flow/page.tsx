@@ -10,6 +10,7 @@ const fmt = (v: number) => `₹${(v / 100).toLocaleString('en-IN', { minimumFrac
 function SankeyDiagram({ data, width, height }: { data: any; width: number; height: number }) {
   const sankeyGenerator = useMemo(() => {
     return (sankey as any)()
+      .nodeId((d: any) => d.id)
       .nodeWidth(20)
       .nodePadding(40)
       .nodeAlign(sankeyCenter)

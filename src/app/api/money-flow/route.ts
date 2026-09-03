@@ -30,14 +30,14 @@ export async function GET() {
     for (const s of settlements) totalSettled += Number(s.amount_minor);
 
     const nodes = [
-      { id: 'Customer Payments' },
-      { id: 'Gross Volume' },
-      { id: 'MDR Fees' },
-      { id: 'GST on Fees' },
-      { id: 'Net Processing' },
-      { id: 'Refunds' },
-      { id: 'Settled to Bank' },
-      { id: 'Pending Settlement' }
+      { id: 'Customer Payments', group: 'source' },
+      { id: 'Gross Volume', group: 'gateway' },
+      { id: 'MDR Fees', group: 'deduction' },
+      { id: 'GST on Fees', group: 'deduction' },
+      { id: 'Net Processing', group: 'gateway' },
+      { id: 'Refunds', group: 'exception' },
+      { id: 'Settled to Bank', group: 'settlement' },
+      { id: 'Pending Settlement', group: 'destination' }
     ];
 
     const pending = Math.max(0, totalNet - totalRefunds - totalSettled);
