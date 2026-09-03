@@ -396,13 +396,13 @@ export function generateSyntheticData(tenantId: string) {
   return { records, tenantId };
 }
 
-export async function seedDatabase(db: Pool, targetTenantId: string) {
+export async function seedDatabase(db: Pool, targetTenantId: string, force: boolean = false) {
   const { records, tenantId } = generateSyntheticData(targetTenantId);
 
   // Check if already seeded (50+ means full synthetic data is loaded; a few simulator records shouldn't block)
   const existingRes = await db.query('SELECT COUNT(*) as count FROM canonical_transactions WHERE tenant_id = $1', [tenantId]);
   const count_val = parseInt(existingRes.rows[0].count, 10) || 0;
-  if (count_val >= 50) return { count: count_val, alreadySeeded: true };
+  if (!force && count_val >= 50) return { count: count_val, alreadySeeded: true };
 
   // Clear any partial data (e.g., from simulator) before full seed
   if (count_val > 0) {

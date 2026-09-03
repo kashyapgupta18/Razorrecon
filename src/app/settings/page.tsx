@@ -8,6 +8,7 @@ function SettingsContent() {
   const [simRunning, setSimRunning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const { connected } = useWS();
   const { addToast } = useToast();
@@ -59,6 +60,41 @@ function SettingsContent() {
       addToast('Reset failed', 'error');
     }
     setClearing(false);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        setUploading(true);
+        const json = JSON.parse(event.target?.result as string);
+        if (!Array.isArray(json)) throw new Error('Must be an array of transactions');
+        
+        const r = await fetch('/api/seed-custom', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(json)
+        });
+        const d = await r.json();
+        
+        if (d.error) {
+          addToast(`Upload failed: ${d.error}`, 'error');
+        } else {
+          addToast(d.message || 'Custom data uploaded successfully', 'success');
+          fetchData();
+        }
+      } catch (err: any) {
+        addToast(`Invalid JSON file: ${err.message}`, 'error');
+      } finally {
+        setUploading(false);
+        // Reset file input
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
   };
 
   const toggleSimulator = async () => {
@@ -202,8 +238,32 @@ function SettingsContent() {
           </div>
           <div style={{ marginTop: 16, display: 'flex', gap: 10 }}>
             <button className="btn btn-primary" onClick={handleSeed} disabled={seeding}>
-              {seeding ? '⏳ Seeding...' : '🌱 Seed Database'}
+              {seeding ? '⏳ Seeding...' : '🌱 Seed Synthetic Data'}
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Custom Data Upload */}
+      <div className="settings-section">
+        <h3>📤 Custom Data Upload</h3>
+        <div className="card">
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
+            Upload your own JSON array of transactions. This will completely replace your current database and automatically trigger the reconciliation engine.
+            The JSON file must contain an array of objects.
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <input 
+              type="file" 
+              accept=".json"
+              onChange={handleFileUpload}
+              disabled={uploading}
+              id="custom-data-upload"
+              style={{ display: 'none' }}
+            />
+            <label htmlFor="custom-data-upload" className="btn btn-outline" style={{ cursor: 'pointer', margin: 0 }}>
+              {uploading ? '⏳ Uploading & Processing...' : '📁 Select JSON File & Upload'}
+            </label>
           </div>
         </div>
       </div>
