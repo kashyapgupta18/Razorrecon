@@ -396,7 +396,7 @@ export function generateSyntheticData(tenantId: string) {
   return { records, tenantId };
 }
 
-export async function seedDatabase(db: Pool, targetTenantId: string, force: boolean = false) {
+export async function seedDatabase(db: Pool, targetTenantId: string = 'tenant_demo_001', force: boolean = false) {
   const { records, tenantId } = generateSyntheticData(targetTenantId);
 
   // Check if already seeded (50+ means full synthetic data is loaded; a few simulator records shouldn't block)
