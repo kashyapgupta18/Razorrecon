@@ -1,0 +1,34 @@
+# CodeRabbit Configuration File
+# Documentation: https://coderabbit.ai/docs/configuration
+
+version: 2
+language: "en"
+tone_instructions: "You are an expert Next.js and TypeScript developer. Provide constructive, concise, and actionable feedback. Focus on security, performance, best practices, and avoiding bugs."
+pull_request:
+  summary:
+    enabled: true
+  walkthrough:
+    enabled: true
+  sequence_diagram:
+    enabled: true
+  related_issues:
+    enabled: false
+
+reviews:
+  profile: "nextjs-typescript"
+  request_changes_workflow: false
+  high_level_summary: true
+  path_instructions:
+    - path: "src/app/**/*.tsx"
+      instructions: "Ensure Next.js Server Components are used by default unless 'use client' is present. Check for proper error boundaries, loading states, and accessibility."
+    - path: "src/app/api/**/*.ts"
+      instructions: "Ensure API routes handle authentication correctly, sanitize inputs, and use parameterized database queries to prevent SQL injection."
+    - path: "**/*.ts"
+      instructions: "Enforce strict TypeScript typing. Avoid the use of 'any' where possible."
+  tools:
+    ast-grep:
+      enabled: false
+
+chat:
+  enabled: true
+  auto_reply: true
