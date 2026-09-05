@@ -13,13 +13,14 @@ const fmt = (v: number) => `₹${(v / 100).toLocaleString('en-IN', { minimumFrac
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 function DashboardContent() {
-  const { data: dash, mutate: mutateDash } = useSWR('/api/dashboard', fetcher);
-  const { data: sys, mutate: mutateSys } = useSWR('/api/system', fetcher);
   const { data: sim, mutate: mutateSim } = useSWR('/api/simulator', fetcher);
+  const simRunning = sim?.running || false;
+
+  const { data: dash, mutate: mutateDash } = useSWR('/api/dashboard', fetcher, { refreshInterval: simRunning ? 3000 : 0 });
+  const { data: sys, mutate: mutateSys } = useSWR('/api/system', fetcher, { refreshInterval: simRunning ? 3000 : 0 });
 
   const data = dash;
   const systemVitals = sys;
-  const simRunning = sim?.running || false;
   
   const loading = !dash || !sys || !sim;
 

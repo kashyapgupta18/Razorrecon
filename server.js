@@ -75,6 +75,20 @@ app.prepare().then(() => {
 
   const server = createServer((req, res) => {
     const parsedUrl = parse(req.url, true);
+    
+    if (parsedUrl.pathname === '/api/internal/ws-broadcast' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => body += chunk);
+      req.on('end', () => {
+        try {
+          if (global.__wsBroadcast) global.__wsBroadcast(JSON.parse(body));
+        } catch(e) {}
+        res.writeHead(200);
+        res.end('ok');
+      });
+      return;
+    }
+
     handle(req, res, parsedUrl);
   });
 

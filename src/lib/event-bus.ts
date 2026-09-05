@@ -54,9 +54,19 @@ class EventBus {
       }
     }
 
-    // Global subscribers (for WebSocket broadcast)
+    // Global subscribers (for WebSocket broadcast within same process)
     for (const sub of this.globalSubscribers) {
       try { sub(event); } catch (e) { console.error('EventBus global subscriber error:', e); }
+    }
+
+    // Forward to main server.js process via internal HTTP bridge if running in API route worker
+    if (typeof process !== 'undefined') {
+      const port = process.env.PORT || '3000';
+      fetch(`http://127.0.0.1:${port}/api/internal/ws-broadcast`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event)
+      }).catch(() => {}); // Silent catch — if it fails, it means we are likely in the main process or no server is listening
     }
   }
 
