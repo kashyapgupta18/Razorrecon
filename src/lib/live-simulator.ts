@@ -113,6 +113,9 @@ export function startSimulator(tenantId: string, intervalMs: number = 3000): { s
   if (simulatorIntervals.has(tenantId)) return { stop: () => stopSimulator(tenantId) };
   txnCounters.set(tenantId, 0);
 
+  // Fire the first transaction immediately so the user sees instant feedback
+  generateLiveTransaction(tenantId).catch(console.error);
+
   const interval = setInterval(() => {
     generateLiveTransaction(tenantId).catch(console.error);
   }, intervalMs);

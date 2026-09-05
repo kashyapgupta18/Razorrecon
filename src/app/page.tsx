@@ -53,7 +53,7 @@ function DashboardContent() {
 
   if (loading) return <div className="kpi-grid">{[...Array(6)].map((_, i) => <div key={i} className="kpi-card shimmer" style={{ height: 110 }} />)}</div>;
 
-  const isEmpty = !data?.transactions?.total;
+  const isEmpty = !data?.transactions?.total && !simRunning;
   const healthScore = data?.healthScore?.score || 0;
   const matchRate = data?.lastRun?.match_rate || 0;
   const chartOpts: any = { // eslint-disable-line @typescript-eslint/no-explicit-any
