@@ -150,6 +150,7 @@ const NAV_ITEMS = [
   { href: '/audit-trail', label: 'Audit Trail', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
   { href: '/ai-copilot', label: 'AI Copilot', icon: 'M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a2.25 2.25 0 01-1.591.659H9.061a2.25 2.25 0 01-1.591-.659L5 14.5m14 0V17a2 2 0 01-2 2H7a2 2 0 01-2-2v-2.5' },
   { href: '/benchmark', label: 'Benchmark', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+  { href: '/upload', label: 'Upload Data', icon: 'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12' },
   { href: '/settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM12 15a3 3 0 100-6 3 3 0 000 6z' },
 ];
 
@@ -208,6 +209,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
     { label: 'Go to Exceptions', desc: 'View exception queue', action: () => { router.push('/exceptions'); }, shortcut: 'G E' },
     { label: 'Go to AI Copilot', desc: 'Ask questions', action: () => { router.push('/ai-copilot'); }, shortcut: 'G A' },
     { label: 'Go to Benchmark', desc: 'Run benchmark tests', action: () => { router.push('/benchmark'); }, shortcut: 'G B' },
+    { label: 'Upload Data', desc: 'Upload CSV/JSON data', action: () => { router.push('/upload'); }, shortcut: 'G U' },
     { label: 'Run Reconciliation', desc: 'Trigger recon engine', action: () => { fetch('/api/reconcile', { method: 'POST' }); onClose(); }, shortcut: '⌘ R' },
     { label: 'Seed Database', desc: 'Load synthetic data', action: () => { fetch('/api/seed', { method: 'POST' }); onClose(); }, shortcut: '⌘ S' },
     { label: 'Start Simulator', desc: 'Live transaction feed', action: () => { fetch('/api/simulator', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action:'start'}) }); onClose(); }, shortcut: '⌘ L' },

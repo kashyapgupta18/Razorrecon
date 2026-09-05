@@ -39,7 +39,7 @@ app.prepare().then(() => {
     .then(async () => {
       console.log('[DB] Schema initialized successfully');
 
-      // Auto-seed realistic data on startup
+      // Auto-seed realistic data on startup (demo tenant only)
       try {
         const db = getDb();
         const result = await seedDatabase(db);
@@ -60,38 +60,16 @@ app.prepare().then(() => {
         console.error('[SEED] Auto-seed failed:', e.message);
       }
 
-      // Auto-start live simulator (generates a new transaction every 5 seconds)
+      // Auto-start live simulator for demo tenant (generates a new transaction every 5 seconds)
       try {
-        startSimulator(5000); // Every 5 seconds
+        startSimulator('tenant_demo_001', 5000); // Every 5 seconds
         console.log('[SIMULATOR] ✅ Live transaction simulator started (every 5s)');
       } catch (e) {
         console.error('[SIMULATOR] Failed to start:', e.message);
       }
 
-      // Auto-run reconciliation every 5 minutes
-      setInterval(async () => {
-        try {
-          const reconResult = await runReconciliation('tenant_demo_001');
-          console.log(`[RECON] Periodic reconciliation — ${reconResult.matchRate?.toFixed(1)}% match rate, ${reconResult.matched} matched, ${reconResult.unmatched} unmatched`);
-          
-          // Broadcast recon result over WebSocket
-          if (global.__wsBroadcast) {
-            global.__wsBroadcast({
-              channel: 'system:reconciliation',
-              data: {
-                type: 'reconciliation_complete',
-                match_rate: reconResult.matchRate,
-                matched: reconResult.matched,
-                unmatched: reconResult.unmatched
-              },
-              timestamp: new Date().toISOString(),
-              id: `recon_auto_${Date.now()}`
-            });
-          }
-        } catch (e) {
-          console.error('[RECON] Periodic reconciliation failed:', e.message);
-        }
-      }, 5 * 60 * 1000); // Every 5 minutes
+      // NOTE: Per-user reconciliation runs on-demand via upload, manual trigger, or per-tenant simulator.
+      // No global periodic reconciliation needed — each tenant is isolated.
     })
     .catch(console.error);
 

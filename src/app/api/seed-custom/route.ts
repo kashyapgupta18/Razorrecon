@@ -10,8 +10,18 @@ export async function POST(req: Request) {
     if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    if (!Array.isArray(body)) {
-      return NextResponse.json({ error: 'Payload must be a JSON array of transactions' }, { status: 400 });
+    
+    // Support { data: [...], mode: 'merge'|'replace' } or just [...]
+    let records: any[];
+    let mode = 'merge'; // Default to merge
+
+    if (Array.isArray(body)) {
+      records = body;
+    } else if (body.data && Array.isArray(body.data)) {
+      records = body.data;
+      mode = body.mode || 'merge';
+    } else {
+      return NextResponse.json({ error: 'Payload must be a JSON array of transactions, or { data: [...], mode: "merge"|"replace" }' }, { status: 400 });
     }
 
     const db = getDb();
@@ -21,23 +31,25 @@ export async function POST(req: Request) {
     try {
       await client.query('BEGIN');
 
-      // Wipe existing transaction data for the tenant
-      await client.query('DELETE FROM canonical_transactions WHERE tenant_id = $1', [tenantId]);
-      await client.query('DELETE FROM match_candidates WHERE recon_run_id IN (SELECT id FROM recon_runs WHERE tenant_id = $1)', [tenantId]);
-      await client.query('DELETE FROM exceptions WHERE tenant_id = $1', [tenantId]);
-      await client.query('DELETE FROM recon_runs WHERE tenant_id = $1', [tenantId]);
-      await client.query('DELETE FROM audit_events WHERE tenant_id = $1', [tenantId]);
-      await client.query('DELETE FROM health_scores WHERE tenant_id = $1', [tenantId]);
-      await client.query('DELETE FROM anomaly_signals WHERE tenant_id = $1', [tenantId]);
-      await client.query('DELETE FROM bank_entries WHERE tenant_id = $1', [tenantId]);
-      await client.query('DELETE FROM settlement_batches WHERE tenant_id = $1', [tenantId]);
+      // Only wipe existing data in 'replace' mode
+      if (mode === 'replace') {
+        await client.query('DELETE FROM match_candidates WHERE recon_run_id IN (SELECT id FROM recon_runs WHERE tenant_id = $1)', [tenantId]);
+        await client.query('DELETE FROM exceptions WHERE tenant_id = $1', [tenantId]);
+        await client.query('DELETE FROM recon_runs WHERE tenant_id = $1', [tenantId]);
+        await client.query('DELETE FROM canonical_transactions WHERE tenant_id = $1', [tenantId]);
+        await client.query('DELETE FROM audit_events WHERE tenant_id = $1', [tenantId]);
+        await client.query('DELETE FROM health_scores WHERE tenant_id = $1', [tenantId]);
+        await client.query('DELETE FROM anomaly_signals WHERE tenant_id = $1', [tenantId]);
+        await client.query('DELETE FROM bank_entries WHERE tenant_id = $1', [tenantId]);
+        await client.query('DELETE FROM settlement_batches WHERE tenant_id = $1', [tenantId]);
+      }
 
       const now = new Date().toISOString();
 
-      for (const rec of body) {
+      for (const rec of records) {
         // Fallback for missing ids
         const id = rec.id || `txn_${uuidv4().slice(0, 12)}`;
-        const amount_minor = Number(rec.amount_minor) || 0;
+        const amount_minor = Number(rec.amount_minor) || (rec.amount ? Math.round(Number(rec.amount) * 100) : 0);
         const type = rec.type || 'payment';
         const status = rec.status || 'captured';
         
@@ -51,8 +63,8 @@ export async function POST(req: Request) {
             Number(rec.fee_minor) || 0, Number(rec.tax_minor) || 0, Number(rec.net_minor) || amount_minor, 
             rec.payment_id || null, rec.order_id || null, rec.refund_id || null,
             rec.settlement_id || null, rec.utr || null, rec.method || 'card', status, 
-            rec.event_time || now, rec.settlement_time || null,
-            rec.counterparty || 'Unknown', rec.description || 'Custom Uploaded Record', 
+            rec.event_time || rec.date || now, rec.settlement_time || null,
+            rec.counterparty || rec.merchant || 'Unknown', rec.description || 'Custom Uploaded Record', 
             uuidv4(), now
           ]);
         count++;

@@ -249,21 +249,31 @@ function SettingsContent() {
         <h3>📤 Custom Data Upload</h3>
         <div className="card">
           <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
-            Upload your own JSON array of transactions. This will completely replace your current database and automatically trigger the reconciliation engine.
-            The JSON file must contain an array of objects.
+            Upload your own CSV or JSON data and run the reconciliation engine on it. Supports merge (add to existing) and replace modes.
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <input 
-              type="file" 
-              accept=".json"
-              onChange={handleFileUpload}
-              disabled={uploading}
-              id="custom-data-upload"
-              style={{ display: 'none' }}
-            />
-            <label htmlFor="custom-data-upload" className="btn btn-outline" style={{ cursor: 'pointer', margin: 0 }}>
-              {uploading ? '⏳ Uploading & Processing...' : '📁 Select JSON File & Upload'}
-            </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <a href="/upload" className="btn btn-primary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              📤 Go to Upload Page
+            </a>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              Drag & drop, CSV/JSON support, data preview, column mapping
+            </span>
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>Or quick-upload a JSON file here:</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <input 
+                type="file" 
+                accept=".json"
+                onChange={handleFileUpload}
+                disabled={uploading}
+                id="custom-data-upload"
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="custom-data-upload" className="btn btn-outline" style={{ cursor: 'pointer', margin: 0 }}>
+                {uploading ? '⏳ Uploading & Processing...' : '📁 Select JSON File'}
+              </label>
+            </div>
           </div>
         </div>
       </div>
