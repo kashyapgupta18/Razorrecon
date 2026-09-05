@@ -209,7 +209,6 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
     { label: 'Go to Benchmark', desc: 'Run benchmark tests', action: () => { router.push('/benchmark'); }, shortcut: 'G B' },
     { label: 'Upload Data', desc: 'Upload CSV/JSON data', action: () => { router.push('/upload'); }, shortcut: 'G U' },
     { label: 'Run Reconciliation', desc: 'Trigger recon engine', action: () => { fetch('/api/reconcile', { method: 'POST' }); onClose(); }, shortcut: '⌘ R' },
-    { label: 'Seed Database', desc: 'Load synthetic data', action: () => { fetch('/api/seed', { method: 'POST' }); onClose(); }, shortcut: '⌘ S' },
     { label: 'Start Simulator', desc: 'Live transaction feed', action: () => { fetch('/api/simulator', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action:'start'}) }); onClose(); }, shortcut: '⌘ L' },
     { label: 'Stop Simulator', desc: 'Stop live feed', action: () => { fetch('/api/simulator', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action:'stop'}) }); onClose(); } },
   ];
@@ -514,12 +513,6 @@ function TopBar({ title }: { title: string }) {
   const { connected } = useWS();
   const { addToast } = useToast();
 
-  const handleSeed = async () => {
-    const r = await fetch('/api/seed', { method: 'POST' });
-    const d = await r.json();
-    addToast(d.message, d.alreadySeeded ? 'info' : 'success');
-  };
-
   const handleRecon = async () => {
     addToast('Starting reconciliation...', 'info');
     const r = await fetch('/api/reconcile', { method: 'POST' });
@@ -536,7 +529,6 @@ function TopBar({ title }: { title: string }) {
       <div className="topbar-spacer" />
       <div className="topbar-actions">
         <ThemeSwitcher />
-        <button className="btn btn-sm btn-secondary" onClick={handleSeed}>Seed Data</button>
         <button className="btn btn-sm btn-primary" onClick={handleRecon}>▶ Run Recon</button>
         <NotificationBell />
         <UserMenu />

@@ -163,7 +163,7 @@ function AuditTrailContent() {
               <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
               <h3 style={{ fontSize: 16, marginBottom: 8 }}>No audit events found</h3>
               <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                {total === 0 ? 'Seed data and run reconciliation to generate audit events.' : 'Try adjusting your filters.'}
+                {total === 0 ? 'Upload data and run reconciliation to generate audit events.' : 'Try adjusting your filters.'}
               </p>
             </div>
           ) : (

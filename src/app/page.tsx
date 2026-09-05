@@ -94,15 +94,12 @@ function DashboardContent() {
           <div style={{ fontSize: 56, marginBottom: 20 }}>📊</div>
           <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12, background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Welcome to RazorRecon AI</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: 15, marginBottom: 32, maxWidth: 480, margin: '0 auto 32px', lineHeight: 1.6 }}>
-            Your database is currently empty. Seed it with 60+ synthetic Razorpay transactions, then run the deterministic 7-layer reconciliation engine.
+            Your database is currently empty. Please navigate to Upload Data to add your transactions, then run the deterministic 7-layer reconciliation engine.
           </p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-            <button className="btn btn-primary" onClick={async () => {
-              const r = await fetch('/api/seed', { method: 'POST' });
-              const d = await r.json();
-              addToast(d.message, d.alreadySeeded ? 'info' : 'success');
-              mutateDash();
-            }}>1. Seed Database</button>
+            <button className="btn btn-primary" onClick={() => {
+              window.location.href = '/upload';
+            }}>1. Upload Data</button>
             <button className="btn btn-secondary" onClick={async () => {
               addToast('Starting reconciliation...', 'info');
               const r = await fetch('/api/reconcile', { method: 'POST' });

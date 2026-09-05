@@ -7,7 +7,6 @@ function SettingsContent() {
   const [systemInfo, setSystemInfo] = useState<Record<string, any> | null>(null);
   const [simRunning, setSimRunning] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [seeding, setSeeding] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const { connected } = useWS();
@@ -35,24 +34,10 @@ function SettingsContent() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const handleSeed = async () => {
-    setSeeding(true);
-    try {
-      const r = await fetch('/api/seed', { method: 'POST' });
-      const d = await r.json();
-      addToast(d.message || 'Database seeded', d.alreadySeeded ? 'info' : 'success');
-      fetchData();
-    } catch {
-      addToast('Seed failed', 'error');
-    }
-    setSeeding(false);
-  };
-
   const handleClearData = async () => {
     setClearing(true);
     try {
-      // Reset by dropping and re-seeding
-      const r = await fetch('/api/seed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force: true }) });
+      const r = await fetch('/api/clear-data', { method: 'POST' });
       const d = await r.json();
       addToast(d.message || 'Data reset complete', 'success');
       fetchData();
@@ -236,11 +221,6 @@ function SettingsContent() {
               <span className="settings-item-value">{systemInfo?.database?.tables?.bank_entries || 0}</span>
             </div>
           </div>
-          <div style={{ marginTop: 16, display: 'flex', gap: 10 }}>
-            <button className="btn btn-primary" onClick={handleSeed} disabled={seeding}>
-              {seeding ? '⏳ Seeding...' : '🌱 Seed Synthetic Data'}
-            </button>
-          </div>
         </div>
       </div>
 
@@ -373,10 +353,10 @@ function SettingsContent() {
         <div className="danger-zone">
           <h3>⚠️ Danger Zone</h3>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
-            These actions are destructive and cannot be undone. The database will be cleared and re-seeded with fresh synthetic data.
+            These actions are destructive and cannot be undone. The database will be cleared.
           </p>
           <button className="btn btn-danger" onClick={handleClearData} disabled={clearing}>
-            {clearing ? '⏳ Resetting...' : '🗑 Reset & Re-seed All Data'}
+            {clearing ? '⏳ Clearing...' : '🗑 Clear All Data'}
           </button>
         </div>
       </div>
