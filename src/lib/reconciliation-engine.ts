@@ -1,7 +1,4 @@
-// ============================================================
-// RazorRecon AI — 7-Layer Reconciliation Engine
 // Deterministic first, AI last. Every decision is evidenced.
-// ============================================================
 import { v4 as uuidv4 } from 'uuid';
 import type { CanonicalTransaction, MatchCandidate, Evidence, ReasonCode, BenchmarkResult, BenchmarkReport, UnresolvedException, ExceptionType } from './types';
 import { getDb } from './db';
@@ -80,7 +77,7 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
     allPayments.push(...batch.filter(t => t.type === 'payment'));
     
     // We run layers 1, 2, 3 on the current batch against all settlements
-    // ============ LAYER 1: Exact ID Match ============
+    // Layer 1: Exact ID Match
     for (const txn of batch) {
     if (matchedSourceIds.has(txn.id)) continue;
     const t0 = performance.now();
@@ -134,7 +131,7 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
     }
   }
 
-  // ============ LAYER 2: Exact Amount + Currency Match ============
+  // Layer 2: Exact Amount + Currency Match
   for (const txn of batch) {
     if (matchedSourceIds.has(txn.id)) continue;
     const t0 = performance.now();
@@ -165,7 +162,7 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
     }
   }
 
-  // ============ LAYER 3: Fee/Tax-Aware Net Amount Match ============
+  // Layer 3: Fee/Tax-Aware Net Amount Match
   for (const txn of batch) {
     if (matchedSourceIds.has(txn.id)) continue;
     const t0 = performance.now();
@@ -200,7 +197,7 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
     offset += BATCH_SIZE;
   } // End of batch processing
 
-  // ============ LAYER 4: Composite Split Match ============
+  // Layer 4: Composite Split Match
   for (const setl of settlements) {
     if (matchedTargetIds.has(setl.id)) continue;
     const t0 = performance.now();
@@ -235,7 +232,7 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
     }
   }
 
-  // ============ LAYER 5: Duplicate Detection ============
+  // Layer 5: Duplicate Detection
   const paymentsByPayId = new Map<string, CanonicalTransaction[]>();
   for (const p of allPayments) {
     if (!p.payment_id) continue;
@@ -268,7 +265,7 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
     }
   }
 
-  // ============ LAYER 6: Fuzzy Candidate Generation ============
+  // Layer 6: Fuzzy Candidate Generation
   for (const txn of allForMatching) {
     if (matchedSourceIds.has(txn.id)) continue;
     const t0 = performance.now();
@@ -307,7 +304,7 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
     }
   }
 
-  // ============ LAYER 7: Create Exceptions for Unmatched ============
+  // Layer 7: Create Exceptions for Unmatched
   for (const txn of allForMatching) {
     if (matchedSourceIds.has(txn.id)) continue;
 

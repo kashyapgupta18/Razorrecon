@@ -1,6 +1,3 @@
-// ============================================================
-// RazorRecon AI — Core Type Definitions
-// ============================================================
 
 // --- Enums ---
 export type TransactionType = 'payment' | 'refund' | 'settlement' | 'transfer' | 'adjustment' | 'dispute' | 'fee' | 'tax';

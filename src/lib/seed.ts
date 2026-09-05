@@ -1,7 +1,4 @@
-// ============================================================
-// RazorRecon AI — Synthetic Data Generator (60+ records)
 // Per PDF Section 9: Known ground truth for benchmark
-// ============================================================
 import { v4 as uuidv4 } from 'uuid';
 import type { CanonicalTransaction } from './types';
 import { Pool } from 'pg';
@@ -70,9 +67,7 @@ const GST_ON_MDR = 0.18;     // 18% GST on MDR
 export function generateSyntheticData(tenantId: string) {
   const records: SeedRecord[] = [];
 
-  // ============================================================
   // Category 1: 25 Exact payment→settlement matches
-  // ============================================================
   for (let i = 0; i < 25; i++) {
     const amount = paise(500 + Math.floor(Math.random() * 9500)); // ₹500-₹10,000
     const fee = Math.round(amount * MDR_RATE);
@@ -113,9 +108,7 @@ export function generateSyntheticData(tenantId: string) {
     });
   }
 
-  // ============================================================
   // Category 2: 10 Partial/batched settlement cases
-  // ============================================================
   for (let b = 0; b < 5; b++) { // 5 batches, 2 payments each = 10
     const setlId = genId('setl');
     const utr = `UTRBATCH${Date.now()}${b}`;
@@ -163,9 +156,7 @@ export function generateSyntheticData(tenantId: string) {
     });
   }
 
-  // ============================================================
   // Category 3: 6 Refunds and reversals
-  // ============================================================
   for (let r = 0; r < 6; r++) {
     const amount = paise(500 + Math.floor(Math.random() * 3000));
     const refundAmount = r < 3 ? amount : Math.round(amount * 0.5); // 3 full, 3 partial
@@ -191,9 +182,7 @@ export function generateSyntheticData(tenantId: string) {
     });
   }
 
-  // ============================================================
   // Category 4: 5 Fee/tax variances
-  // ============================================================
   for (let f = 0; f < 5; f++) {
     const amount = paise(2000 + Math.floor(Math.random() * 5000));
     const correctFee = Math.round(amount * MDR_RATE);
@@ -222,9 +211,7 @@ export function generateSyntheticData(tenantId: string) {
     });
   }
 
-  // ============================================================
   // Category 5: 4 Duplicates
-  // ============================================================
   for (let d = 0; d < 4; d++) {
     const amount = paise(1000 + Math.floor(Math.random() * 4000));
     const fee = Math.round(amount * MDR_RATE);
@@ -257,9 +244,7 @@ export function generateSyntheticData(tenantId: string) {
     });
   }
 
-  // ============================================================
   // Category 6: 4 Delayed/missing records
-  // ============================================================
   // 2 settlements without matching payment
   for (let m = 0; m < 2; m++) {
     records.push({
@@ -298,9 +283,7 @@ export function generateSyntheticData(tenantId: string) {
     });
   }
 
-  // ============================================================
   // Category 7: 3 Currency/rounding edge cases
-  // ============================================================
   // Paise rounding
   records.push({
     payment: {
@@ -344,9 +327,7 @@ export function generateSyntheticData(tenantId: string) {
     }, settlement: null
   });
 
-  // ============================================================
   // Category 8: 3 Deliberately ambiguous cases
-  // ============================================================
   const ambigTime = randomDate(5);
   const ambigAmount = paise(5000);
   // Same amount, same day, different merchants

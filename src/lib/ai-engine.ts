@@ -1,7 +1,3 @@
-// ============================================================
-// RazorRecon AI — AI Copilot Engine (Rule-Based with Proof-of-Logic)
-// Deterministic, auditable, no external API dependency
-// ============================================================
 import { getDb } from './db';
 import { v4 as uuidv4 } from 'uuid';
 import type { AICitation, Exception, ReconRun, MatchCandidate, HealthScore, AnomalySignal } from './types';

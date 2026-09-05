@@ -1,8 +1,5 @@
-// ============================================================
-// RazorRecon AI — Live Transaction Simulator
 // Generates realistic transactions in real-time to simulate
 // production webhook ingestion from Razorpay
-// ============================================================
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from './db';
 import { eventBus } from './event-bus';

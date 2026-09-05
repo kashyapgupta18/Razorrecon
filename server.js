@@ -1,9 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// ============================================================
-// RazorRecon AI — Custom Server with WebSocket Support
 // Wraps Next.js with ws for bidirectional real-time comms
-// ============================================================
 const { createServer } = require('http');
 const { parse } = require('url');
 const next = require('next');

@@ -1,7 +1,3 @@
-// ============================================================
-// RazorRecon AI — In-Memory Event Bus for Real-Time Broadcasting
-// Typed channels, subscriber management, event replay buffer
-// ============================================================
 
 export type EventChannel =
   | 'recon:progress'      // Reconciliation progress updates
