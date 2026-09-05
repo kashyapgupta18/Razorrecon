@@ -3,6 +3,12 @@ import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
 import { v4 as uuidv4 } from 'uuid';
 import getDb from '@/lib/db';
+import { rateLimit } from '@/lib/rate-limit';
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // limit each IP to 5 requests per windowMs
+});
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'fallback_secret_for_development_only_12345'
@@ -10,6 +16,12 @@ const JWT_SECRET = new TextEncoder().encode(
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const rateLimitResult = limiter.check(5, ip);
+    if (!rateLimitResult.success) {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+    }
+
     const { email, password } = await request.json();
 
     if (!email || !password) {
@@ -83,8 +95,8 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch (error: any) {
-    console.error('Signin error:', error);
+  } catch (error: unknown) {
+    console.error('Signin error:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

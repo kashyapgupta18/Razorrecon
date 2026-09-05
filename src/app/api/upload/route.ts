@@ -3,6 +3,12 @@ import { getDb } from '@/lib/db';
 import { getTenantId } from '@/lib/auth-server';
 import { runReconciliation } from '@/lib/reconciliation-engine';
 import { v4 as uuidv4 } from 'uuid';
+import { rateLimit } from '@/lib/rate-limit';
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+});
 
 // Maximum file size: 5MB
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -135,6 +141,12 @@ function normalizeRecord(raw: ParsedRecord): {
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const rateLimitResult = limiter.check(3, ip);
+    if (!rateLimitResult.success) {
+      return NextResponse.json({ error: 'Too many uploads. Please try again later.' }, { status: 429 });
+    }
+
     const tenantId = await getTenantId();
     if (!tenantId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -305,9 +317,9 @@ export async function POST(req: Request) {
       },
       message: `Successfully ${mode === 'merge' ? 'merged' : 'uploaded'} ${insertedCount} records. Reconciliation: ${reconResult.matchRate.toFixed(1)}% match rate.`
     });
-  } catch (error: any) {
-    console.error('Upload error:', error);
-    return NextResponse.json({ error: error.message || 'Upload failed' }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('Upload error:', error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Upload failed' }, { status: 500 });
   }
 }
 

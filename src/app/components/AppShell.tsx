@@ -1,7 +1,10 @@
 'use client';
-// @ts-nocheck
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import useSWR from 'swr';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 
 interface WebSocketEvent {
   channel?: string;
@@ -155,13 +158,8 @@ const NAV_ITEMS = [
 ];
 
 function Sidebar({ collapsed, onToggle, currentPath }: { collapsed: boolean; onToggle: () => void; currentPath: string }) {
-  const [excCount, setExcCount] = useState(0);
-
-  useEffect(() => {
-    fetch('/api/exceptions').then(r => r.json()).then(d => {
-      setExcCount(d.exceptions?.filter((e: { status: string }) => e.status === 'open').length || 0);
-    }).catch(() => {});
-  }, []);
+  const { data } = useSWR('/api/exceptions', fetcher, { refreshInterval: 10000 });
+  const excCount = data?.exceptions?.filter((e: { status: string }) => e.status === 'open').length || 0;
 
   return (
     <nav className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
@@ -261,7 +259,7 @@ function ThemeSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   
   useEffect(() => {
-    const saved = localStorage.getItem('theme') || 'cyberpunk';
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('theme') || 'cyberpunk' : 'cyberpunk';
     setTheme(saved);
   }, []);
 
@@ -314,7 +312,7 @@ function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const { events, lastEvent } = useWS();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [popups, setPopups] = useState<any[]>([]);
+  const [popups, setPopups] = useState<Array<{ id: number; event: WebSocketEvent }>>([]);
 
   // Filter events to only meaningful notifications
   const notifications = events.filter(e => 

@@ -2,9 +2,21 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import getDb from '@/lib/db';
+import { rateLimit } from '@/lib/rate-limit';
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+});
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const rateLimitResult = limiter.check(5, ip);
+    if (!rateLimitResult.success) {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+    }
+
     const { name, email, password } = await request.json();
 
     if (!name || !email || !password) {
@@ -59,8 +71,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, message: 'User created successfully' });
-  } catch (error: any) {
-    console.error('Signup error:', error);
+  } catch (error: unknown) {
+    console.error('Signup error:', error instanceof Error ? error.message : error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

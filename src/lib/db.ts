@@ -4,8 +4,12 @@ const isSupabase = (process.env.DATABASE_URL || '').includes('supabase');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/razorrecon',
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
   ...(isSupabase ? { ssl: { rejectUnauthorized: false } } : {})
 });
+
 
 export function getDb() {
   return pool;

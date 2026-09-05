@@ -1,5 +1,5 @@
 'use client';
-// @ts-nocheck
+
 import { useState, useEffect, useCallback } from 'react';
 import type { CanonicalTransaction, MatchCandidate } from '../../lib/types';
 import AppShell, { useWS, useToast } from '../components/AppShell';

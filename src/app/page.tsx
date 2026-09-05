@@ -1,6 +1,7 @@
 'use client';
-// @ts-nocheck
-import { useState, useEffect, useRef, useCallback } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
+import useSWR from 'swr';
 import AppShell, { useWS, useToast } from './components/AppShell';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend, Filler } from 'chart.js';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
@@ -9,37 +10,30 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 
 const fmt = (v: number) => `₹${(v / 100).toLocaleString('en-IN', { minimumFractionDigits: 0 })}`;
 
+const fetcher = (url: string) => fetch(url).then(r => r.json());
+
 function DashboardContent() {
-  const [data, setData] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
-  const [loading, setLoading] = useState(true);
-  const [simRunning, setSimRunning] = useState(false);
-  const [systemVitals, setSystemVitals] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const { data: dash, mutate: mutateDash } = useSWR('/api/dashboard', fetcher);
+  const { data: sys, mutate: mutateSys } = useSWR('/api/system', fetcher);
+  const { data: sim, mutate: mutateSim } = useSWR('/api/simulator', fetcher);
+
+  const data = dash;
+  const systemVitals = sys;
+  const simRunning = sim?.running || false;
+  
+  const loading = !dash || !sys || !sim;
+
   const { lastEvent, connected, events } = useWS();
   const { addToast } = useToast();
-  const refreshRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const fetchData = useCallback(async () => {
-    try {
-      const [dashRes, sysRes, simRes] = await Promise.all([
-        fetch('/api/dashboard'), fetch('/api/system'), fetch('/api/simulator')
-      ]);
-      const [dash, sys, sim] = await Promise.all([dashRes.json(), sysRes.json(), simRes.json()]);
-      setData(dash); setSystemVitals(sys); setSimRunning(sim.running); setLoading(false);
-    } catch { setLoading(false); }
-  }, []);
-
-  useEffect(() => { 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchData(); 
-  }, [fetchData]);
 
   // Auto-refresh on WebSocket events
   useEffect(() => {
     if (!lastEvent) return;
     const ch = lastEvent.channel;
     if (ch === 'recon:completed' || ch === 'txn:ingested' || ch === 'exception:updated') {
-      clearTimeout(refreshRef.current);
-      refreshRef.current = setTimeout(fetchData, 800);
+      mutateDash();
+      mutateSys();
+      mutateSim();
     }
     if (ch === 'recon:completed') {
       addToast(`Recon complete: ${(lastEvent.data?.matchRate as number)?.toFixed(1)}% match rate`, 'success');
@@ -47,14 +41,15 @@ function DashboardContent() {
     if (ch === 'txn:ingested') {
       // Silent — too frequent for toasts
     }
-  }, [lastEvent, fetchData, addToast]);
+  }, [lastEvent, mutateDash, mutateSys, mutateSim, addToast]);
 
   const toggleSimulator = async () => {
     const action = simRunning ? 'stop' : 'start';
     await fetch('/api/simulator', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
-    setSimRunning(!simRunning);
+    mutateSim({ running: action === 'start' }, false);
     addToast(`Simulator ${action}ed`, action === 'start' ? 'success' : 'info');
   };
+
 
   if (loading) return <div className="kpi-grid">{[...Array(6)].map((_, i) => <div key={i} className="kpi-card shimmer" style={{ height: 110 }} />)}</div>;
 
@@ -106,7 +101,7 @@ function DashboardContent() {
               const r = await fetch('/api/seed', { method: 'POST' });
               const d = await r.json();
               addToast(d.message, d.alreadySeeded ? 'info' : 'success');
-              fetchData();
+              mutateDash();
             }}>1. Seed Database</button>
             <button className="btn btn-secondary" onClick={async () => {
               addToast('Starting reconciliation...', 'info');
@@ -114,8 +109,9 @@ function DashboardContent() {
               const d = await r.json();
               if (d.success) addToast(`Recon complete: ${d.matchRate?.toFixed(1)}% match rate`, 'success');
               else addToast(`Recon failed: ${d.error}`, 'error');
-              fetchData();
+              mutateDash();
             }}>2. Run Reconciliation</button>
+
           </div>
         </div>
       )}

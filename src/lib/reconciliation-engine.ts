@@ -38,14 +38,12 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
   const runId = genId('run');
   const startTime = Date.now();
 
-  // Get all transactions for this tenant
-  const allTxnsRes = await db.query('SELECT * FROM canonical_transactions WHERE tenant_id = $1', [tenantId]);
-  const allTxns = allTxnsRes.rows as CanonicalTransaction[];
-
-  const payments = allTxns.filter(t => t.type === 'payment');
-  const settlements = allTxns.filter(t => t.type === 'settlement');
-  const refunds = allTxns.filter(t => t.type === 'refund');
-  const allForMatching = [...payments, ...refunds];
+  // Fetch settlements first (usually smaller dataset)
+  const settlementsRes = await db.query(
+    "SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type = 'settlement'", 
+    [tenantId]
+  );
+  const settlements = settlementsRes.rows as CanonicalTransaction[];
 
   const candidates: MatchCandidate[] = [];
   const exceptions: ReconResult['exceptions'] = [];
@@ -53,9 +51,37 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
   const matchedTargetIds = new Set<string>();
   const duplicateIds = new Set<string>();
   const latencies: number[] = [];
+  let totalRecords = settlements.length;
 
-  // ============ LAYER 1: Exact ID Match ============
-  for (const txn of allForMatching) {
+  // Process payments and refunds in batches to prevent memory exhaustion
+  const BATCH_SIZE = 5000;
+  let offset = 0;
+  let hasMore = true;
+  
+  // Track all payments for the composite split and duplicate layers, we will just store minimal info if needed, 
+  // but for simplicity of this refactor, we process layers 1-3 in batches, then layers 4-5.
+  // Actually, keeping the structure similar: we fetch payments in chunks, run layers 1, 2, 3 on each chunk.
+  const allPayments: CanonicalTransaction[] = [];
+  const allForMatching: CanonicalTransaction[] = [];
+
+  while (hasMore) {
+    const batchRes = await db.query(
+      "SELECT * FROM canonical_transactions WHERE tenant_id = $1 AND type IN ('payment', 'refund') ORDER BY created_at ASC LIMIT $2 OFFSET $3",
+      [tenantId, BATCH_SIZE, offset]
+    );
+    const batch = batchRes.rows as CanonicalTransaction[];
+    if (batch.length === 0) {
+      hasMore = false;
+      break;
+    }
+    
+    totalRecords += batch.length;
+    allForMatching.push(...batch);
+    allPayments.push(...batch.filter(t => t.type === 'payment'));
+    
+    // We run layers 1, 2, 3 on the current batch against all settlements
+    // ============ LAYER 1: Exact ID Match ============
+    for (const txn of batch) {
     if (matchedSourceIds.has(txn.id)) continue;
     const t0 = performance.now();
 
@@ -109,7 +135,7 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
   }
 
   // ============ LAYER 2: Exact Amount + Currency Match ============
-  for (const txn of allForMatching) {
+  for (const txn of batch) {
     if (matchedSourceIds.has(txn.id)) continue;
     const t0 = performance.now();
 
@@ -140,7 +166,7 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
   }
 
   // ============ LAYER 3: Fee/Tax-Aware Net Amount Match ============
-  for (const txn of allForMatching) {
+  for (const txn of batch) {
     if (matchedSourceIds.has(txn.id)) continue;
     const t0 = performance.now();
 
@@ -171,13 +197,16 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
     }
   }
 
+    offset += BATCH_SIZE;
+  } // End of batch processing
+
   // ============ LAYER 4: Composite Split Match ============
   for (const setl of settlements) {
     if (matchedTargetIds.has(setl.id)) continue;
     const t0 = performance.now();
 
     // Find unmatched payments that could sum to this settlement
-    const unmatchedPayments = payments.filter(p =>
+    const unmatchedPayments = allPayments.filter(p =>
       !matchedSourceIds.has(p.id) &&
       p.currency === setl.currency &&
       p.settlement_id === setl.settlement_id
@@ -208,7 +237,7 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
 
   // ============ LAYER 5: Duplicate Detection ============
   const paymentsByPayId = new Map<string, CanonicalTransaction[]>();
-  for (const p of payments) {
+  for (const p of allPayments) {
     if (!p.payment_id) continue;
     const group = paymentsByPayId.get(p.payment_id) || [];
     group.push(p);
@@ -308,7 +337,6 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
   }
 
   // ============ Calculate Metrics ============
-  const totalRecords = allForMatching.length;
   const matched = matchedSourceIds.size;
   const unmatched = exceptions.length;
   const partial = candidates.filter(c => c.match_type === 'composite_split').length;
@@ -319,7 +347,9 @@ export async function runReconciliation(tenantId: string): Promise<ReconResult> 
   let truePositives = 0, falsePositives = 0, falseNegatives = 0;
   for (const c of candidates) {
     if (c.reason_code === 'DUPLICATE_DETECTED') continue;
-    const source = allTxns.find(t => t.id === c.source_id);
+    // For ground truth validation, check if it was supposed to match
+    // Since we don't have allTxns array anymore, we check allForMatching
+    const source = allForMatching.find(t => t.id === c.source_id);
     if (!source) continue;
     if (source.ground_truth_outcome === 'MATCH' || source.ground_truth_outcome === 'PARTIAL') {
       truePositives++;

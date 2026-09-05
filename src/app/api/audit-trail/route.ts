@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import { NextResponse } from 'next/server';
 import { getDb } from '../../../lib/db';
 
@@ -65,8 +65,9 @@ export async function GET(req: Request) {
         actors: actorsRes.rows.map(r => r.actor),
       },
     });
-  } catch (error) {
-    console.error('[API] Audit trail error:', error);
+  } catch (error: unknown) {
+    console.error('[API] Audit trail error:', error instanceof Error ? error.message : error);
     return NextResponse.json({ events: [], total: 0, filters: { actions: [], entities: [], actors: [] } });
   }
 }
+

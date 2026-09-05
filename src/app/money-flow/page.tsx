@@ -1,5 +1,5 @@
 'use client';
-// @ts-nocheck
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import AppShell from '../components/AppShell';
 import { sankey, sankeyLinkHorizontal, sankeyCenter } from 'd3-sankey';
